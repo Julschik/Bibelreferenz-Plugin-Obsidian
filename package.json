@@ -1,0 +1,29 @@
+{
+  "name": "bible-reference-mapper",
+  "version": "1.0.0",
+  "description": "Obsidian plugin for automatic Bible reference detection and tagging",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "bible",
+    "reference",
+    "tagging"
+  ],
+  "author": "Julian Hill",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "esbuild": "^0.19.0",
+    "obsidian": "^1.4.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

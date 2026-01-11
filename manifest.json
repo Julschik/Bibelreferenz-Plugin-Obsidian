@@ -1,0 +1,10 @@
+{
+  "id": "bible-reference-mapper",
+  "name": "Bible Reference Mapper",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Automatically detects and tags Bible references in your notes. Low friction Bible study integration with concordance sidebar.",
+  "author": "Julian Hill",
+  "authorUrl": "https://github.com/Julschik",
+  "isDesktopOnly": false
+}
