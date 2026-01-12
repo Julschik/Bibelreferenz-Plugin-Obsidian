@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, setIcon } from 'obsidian';
 import type { ExpandedReference, LinkBehavior, BibleRefSettings } from '../../types';
 import type { I18nService } from '../../i18n/I18nService';
 
@@ -52,8 +52,11 @@ export class DirectReferencesTab {
     // Group references by verse key
     const groupedRefs = this.groupByVerse(this.currentRefs);
 
-    for (const [verseKey, refs] of groupedRefs) {
-      this.renderVerseGroup(verseKey, refs[0]);
+    // Create list wrapper with shared expandable styles
+    const listEl = containerEl.createDiv('bible-ref-expandable-list');
+
+    for (const [, refs] of groupedRefs) {
+      this.renderVerseGroup(listEl, refs[0]);
     }
   }
 
@@ -73,41 +76,74 @@ export class DirectReferencesTab {
   }
 
   /**
-   * Render a verse group with related notes
+   * Render a verse group with related notes (collapsable)
    */
-  private renderVerseGroup(verseKey: string, ref: ExpandedReference): void {
-    const groupEl = this.containerEl.createDiv('bible-ref-group');
+  private renderVerseGroup(listEl: HTMLElement, ref: ExpandedReference): void {
+    const itemEl = listEl.createDiv('bible-ref-expandable');
 
-    // Verse header
+    // Header row (clickable to expand)
+    const headerEl = itemEl.createDiv('bible-ref-expandable-header');
+
+    // Expand/collapse icon
+    const expandIcon = headerEl.createSpan({ cls: 'bible-ref-expand-icon' });
+    setIcon(expandIcon, 'chevron-right');
+
+    // Verse display
     const verseDisplay = this.formatVerse(ref);
-    groupEl.createEl('h4', {
+    headerEl.createEl('span', {
       text: verseDisplay,
-      cls: 'bible-ref-verse-header'
+      cls: 'bible-ref-parallel-verse'
     });
 
     // Find other notes with this verse
     const otherNotes = this.findNotesWithVerse(ref);
 
+    // Count display
+    if (otherNotes.length > 0) {
+      headerEl.createEl('span', {
+        text: this.i18n.t('sidebarParallelCount', { count: otherNotes.length }),
+        cls: 'bible-ref-parallel-count'
+      });
+    }
+
+    // Expandable content (initially hidden)
+    const contentEl = itemEl.createDiv('bible-ref-parallel-files');
+    contentEl.style.display = 'none';
+
     if (otherNotes.length === 0) {
-      groupEl.createEl('p', {
+      contentEl.createEl('p', {
         text: this.i18n.t('sidebarNoOtherNotes'),
         cls: 'bible-ref-empty-hint'
       });
     } else {
-      const listEl = groupEl.createEl('ul', { cls: 'bible-ref-note-list' });
+      const noteListEl = contentEl.createEl('ul', { cls: 'bible-ref-note-list' });
 
       for (const note of otherNotes) {
-        const li = listEl.createEl('li');
+        const li = noteListEl.createEl('li');
         const link = li.createEl('a', {
           text: note.basename,
           cls: 'bible-ref-note-link'
         });
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
+        link.addEventListener('click', (e: unknown) => {
+          const event = e as { preventDefault: () => void; stopPropagation: () => void };
+          event.preventDefault();
+          event.stopPropagation();
           this.openNote(note);
         });
       }
     }
+
+    // Toggle expand/collapse
+    headerEl.addEventListener('click', () => {
+      const isExpanded = contentEl.style.display !== 'none';
+      contentEl.style.display = isExpanded ? 'none' : 'block';
+      setIcon(expandIcon, isExpanded ? 'chevron-right' : 'chevron-down');
+      if (isExpanded) {
+        itemEl.removeClass('expanded');
+      } else {
+        itemEl.addClass('expanded');
+      }
+    });
   }
 
   /**

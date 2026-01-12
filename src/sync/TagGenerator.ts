@@ -1,5 +1,6 @@
 import type { ParsedReference, ExpandedReference, BibleRefSettings } from '../types';
 import { RangeExpander } from '../parser/RangeExpander';
+import { DisplayIdResolver, createDisplayIdResolver } from '../parser/DisplayIdResolver';
 
 /**
  * TagGenerator
@@ -18,10 +19,12 @@ import { RangeExpander } from '../parser/RangeExpander';
 export class TagGenerator {
   private settings: BibleRefSettings;
   private rangeExpander: RangeExpander;
+  private displayIdResolver: DisplayIdResolver;
 
   constructor(settings: BibleRefSettings) {
     this.settings = settings;
     this.rangeExpander = new RangeExpander();
+    this.displayIdResolver = createDisplayIdResolver(settings);
   }
 
   /**
@@ -51,19 +54,21 @@ export class TagGenerator {
    */
   private generateTagsForReference(ref: ParsedReference): string[] {
     const prefix = this.settings.tagPrefix;
+    // Use display ID instead of canonical ID
+    const displayId = this.displayIdResolver.getDisplayId(ref.bookId);
 
     switch (ref.granularity) {
       case 'book':
-        // Book level: "bible/Col"
-        return [`${prefix}${ref.bookId}`];
+        // Book level: "bible/Col" or "bible/Mt" if pinned
+        return [`${prefix}${displayId}`];
 
       case 'chapter':
         // Chapter level: Expand to all verses OR just chapter tag
-        return this.generateChapterTags(ref, prefix);
+        return this.generateChapterTags(ref, prefix, displayId);
 
       case 'verse':
         // Verse level: Expand ranges to individual verses (Atomic Tagging)
-        return this.generateVerseTags(ref, prefix);
+        return this.generateVerseTags(ref, prefix, displayId);
 
       default:
         return [];
@@ -74,14 +79,14 @@ export class TagGenerator {
    * Generate tags for chapter-level references
    * Expands to all individual verses in the chapter(s)
    */
-  private generateChapterTags(ref: ParsedReference, prefix: string): string[] {
+  private generateChapterTags(ref: ParsedReference, prefix: string, displayId: string): string[] {
     const tags: string[] = [];
 
     // Expand to individual verses
     const expanded = this.rangeExpander.expand(ref);
 
     for (const verse of expanded) {
-      tags.push(`${prefix}${verse.bookId}/${verse.chapter}/${verse.verse}`);
+      tags.push(`${prefix}${displayId}/${verse.chapter}/${verse.verse}`);
     }
 
     return tags;
@@ -91,14 +96,14 @@ export class TagGenerator {
    * Generate tags for verse-level references
    * Handles single verses, ranges, and lists
    */
-  private generateVerseTags(ref: ParsedReference, prefix: string): string[] {
+  private generateVerseTags(ref: ParsedReference, prefix: string, displayId: string): string[] {
     const tags: string[] = [];
 
     // Expand to individual verses (handles ranges, lists, cross-chapter, etc.)
     const expanded = this.rangeExpander.expand(ref);
 
     for (const verse of expanded) {
-      tags.push(`${prefix}${verse.bookId}/${verse.chapter}/${verse.verse}`);
+      tags.push(`${prefix}${displayId}/${verse.chapter}/${verse.verse}`);
     }
 
     return tags;
@@ -109,6 +114,7 @@ export class TagGenerator {
    */
   updateSettings(settings: BibleRefSettings): void {
     this.settings = settings;
+    this.displayIdResolver = createDisplayIdResolver(settings);
   }
 }
 

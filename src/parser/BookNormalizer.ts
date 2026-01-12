@@ -1,4 +1,4 @@
-import type { BookMapping, BibleRefSettings } from '../types';
+import type { BookMapping, BibleRefSettings, CustomBookMappingsV2 } from '../types';
 import { BOOK_MAPPINGS_DE } from '../data/bookMappings.de';
 import { BOOK_MAPPINGS_EN } from '../data/bookMappings.en';
 import { escapeRegex } from '../utils/regexUtils';
@@ -17,15 +17,17 @@ export class BookNormalizer {
 
   /**
    * @param language Language for book mappings
-   * @param customMappings Optional custom book mappings (overrides built-in)
+   * @param customMappingsV1 Optional V1 custom book mappings (deprecated, kept for backwards compatibility)
+   * @param customMappingsV2 Optional V2 custom book mappings with additions and deletions
    */
   constructor(
     language: 'de' | 'en' | 'custom',
-    customMappings?: Record<string, string>
+    customMappingsV1?: Record<string, string>,
+    customMappingsV2?: CustomBookMappingsV2
   ) {
     const mappings = this.loadMappings(language);
-    this.aliasMap = this.buildAliasMap(mappings, customMappings);
-    this.standalonePatterns = this.buildStandalonePatterns(mappings);
+    this.aliasMap = this.buildAliasMap(mappings, customMappingsV1, customMappingsV2);
+    this.standalonePatterns = this.buildStandalonePatterns(mappings, customMappingsV2);
     this.allAliasesPattern = this.buildAllAliasesPattern();
   }
 
@@ -89,15 +91,43 @@ export class BookNormalizer {
   /**
    * Build alias map: lowercased alias → canonical ID
    * CRITICAL: Longer aliases are preferred for matching
+   *
+   * Handles both V1 (simple additions) and V2 (additions + deletions) customizations
    */
   private buildAliasMap(
     mappings: BookMapping[],
-    customMappings?: Record<string, string>
+    customMappingsV1?: Record<string, string>,
+    customMappingsV2?: CustomBookMappingsV2
   ): Map<string, string> {
     const map = new Map<string, string>();
 
-    // Add built-in mappings
-    for (const mapping of mappings) {
+    // Create working copy of mappings with V2 customizations applied
+    const workingMappings = mappings.map(m => {
+      const customization = customMappingsV2?.[m.canonicalId];
+
+      let aliases = [...m.aliases];
+
+      if (customization) {
+        // Apply deletions first (remove default aliases)
+        if (customization.aliasesDeletions) {
+          aliases = aliases.filter(
+            a => !customization.aliasesDeletions!.some(
+              del => del.toLowerCase() === a.toLowerCase()
+            )
+          );
+        }
+
+        // Apply additions (add custom aliases)
+        if (customization.aliasesAdditions) {
+          aliases.push(...customization.aliasesAdditions);
+        }
+      }
+
+      return { ...m, aliases };
+    });
+
+    // Add built-in mappings (with V2 customizations applied)
+    for (const mapping of workingMappings) {
       // Sort aliases by length (longest first) to prioritize specific matches
       const sortedAliases = [...mapping.aliases].sort(
         (a, b) => b.length - a.length
@@ -112,9 +142,9 @@ export class BookNormalizer {
       }
     }
 
-    // Apply custom mappings (override built-in)
-    if (customMappings) {
-      for (const [alias, bookId] of Object.entries(customMappings)) {
+    // Apply V1 custom mappings (override built-in, kept for backwards compatibility)
+    if (customMappingsV1) {
+      for (const [alias, bookId] of Object.entries(customMappingsV1)) {
         map.set(alias.toLowerCase(), bookId);
       }
     }
@@ -125,13 +155,41 @@ export class BookNormalizer {
   /**
    * Build standalone patterns for books that can be referenced without chapter/verse
    * Examples: "Kolosserbrief", "Genesis", "Book of Revelation"
+   *
+   * Handles V2 customizations (additions + deletions)
    */
   private buildStandalonePatterns(
-    mappings: BookMapping[]
+    mappings: BookMapping[],
+    customMappingsV2?: CustomBookMappingsV2
   ): { pattern: RegExp; bookId: string }[] {
     const patterns: { pattern: RegExp; bookId: string }[] = [];
 
-    for (const mapping of mappings) {
+    // Create working copy of mappings with V2 customizations applied
+    const workingMappings = mappings.map(m => {
+      const customization = customMappingsV2?.[m.canonicalId];
+
+      let standalonePatterns = [...m.standalonePatterns];
+
+      if (customization) {
+        // Apply deletions first (remove default patterns)
+        if (customization.standalonePatternsDeletions) {
+          standalonePatterns = standalonePatterns.filter(
+            p => !customization.standalonePatternsDeletions!.some(
+              del => del.toLowerCase() === p.toLowerCase()
+            )
+          );
+        }
+
+        // Apply additions (add custom patterns)
+        if (customization.standalonePatternsAdditions) {
+          standalonePatterns.push(...customization.standalonePatternsAdditions);
+        }
+      }
+
+      return { ...m, standalonePatterns };
+    });
+
+    for (const mapping of workingMappings) {
       if (mapping.standalonePatterns.length > 0) {
         // Sort by length (longest first) for greedy matching
         const sorted = [...mapping.standalonePatterns].sort(
@@ -191,5 +249,9 @@ export class BookNormalizer {
 export function createBookNormalizer(
   settings: BibleRefSettings
 ): BookNormalizer {
-  return new BookNormalizer(settings.language, settings.customBookMappings);
+  return new BookNormalizer(
+    settings.language,
+    settings.customBookMappings,
+    settings.customBookMappingsV2
+  );
 }

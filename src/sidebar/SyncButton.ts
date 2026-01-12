@@ -21,6 +21,7 @@ export class SyncButton {
   private onSyncCallback: () => Promise<void>;
   private i18n: I18nService;
   private timeoutId: number | null = null;
+  private minSpinnerStartTime: number | null = null;
 
   /**
    * State der Button-Komponente
@@ -42,7 +43,7 @@ export class SyncButton {
   private render(): void {
     // Create button element
     this.buttonEl = this.containerEl.createEl('button', {
-      cls: 'bible-ref-sync-button',
+      cls: 'clickable-icon bible-ref-sync-button',
       attr: {
         'aria-label': this.i18n.t('syncButtonSync')
       }
@@ -84,9 +85,11 @@ export class SyncButton {
     if (loading) {
       this.state = 'loading';
       this.buttonEl.disabled = true;
+      this.minSpinnerStartTime = Date.now();
     } else {
       this.state = 'idle';
       this.buttonEl.disabled = false;
+      this.minSpinnerStartTime = null;
     }
 
     this.updateButtonContent();
@@ -97,16 +100,23 @@ export class SyncButton {
    * Zeigt Checkmark für 2 Sekunden.
    */
   setSuccess(): void {
-    this.state = 'success';
-    this.buttonEl.disabled = false;
-    this.updateButtonContent();
+    // Ensure minimum spinner duration
+    const elapsed = this.minSpinnerStartTime ? Date.now() - this.minSpinnerStartTime : 0;
+    const minDuration = 500;
+    const remainingTime = Math.max(0, minDuration - elapsed);
 
-    // Reset to idle after 2s
-    this.clearTimeout();
-    this.timeoutId = window.setTimeout(() => {
-      this.state = 'idle';
+    setTimeout(() => {
+      this.state = 'success';
+      this.buttonEl.disabled = false;
       this.updateButtonContent();
-    }, 2000);
+
+      // Reset to idle after 2s
+      this.clearTimeout();
+      this.timeoutId = window.setTimeout(() => {
+        this.state = 'idle';
+        this.updateButtonContent();
+      }, 2000);
+    }, remainingTime);
   }
 
   /**
@@ -114,16 +124,23 @@ export class SyncButton {
    * Zeigt Error-Icon für 2 Sekunden.
    */
   setError(): void {
-    this.state = 'error';
-    this.buttonEl.disabled = false;
-    this.updateButtonContent();
+    // Ensure minimum spinner duration
+    const elapsed = this.minSpinnerStartTime ? Date.now() - this.minSpinnerStartTime : 0;
+    const minDuration = 500;
+    const remainingTime = Math.max(0, minDuration - elapsed);
 
-    // Reset to idle after 2s
-    this.clearTimeout();
-    this.timeoutId = window.setTimeout(() => {
-      this.state = 'idle';
+    setTimeout(() => {
+      this.state = 'error';
+      this.buttonEl.disabled = false;
       this.updateButtonContent();
-    }, 2000);
+
+      // Reset to idle after 2s
+      this.clearTimeout();
+      this.timeoutId = window.setTimeout(() => {
+        this.state = 'idle';
+        this.updateButtonContent();
+      }, 2000);
+    }, remainingTime);
   }
 
   /**
@@ -131,16 +148,23 @@ export class SyncButton {
    * Zeigt Timeout-Icon für 2 Sekunden.
    */
   setTimeoutState(): void {
-    this.state = 'timeout';
-    this.buttonEl.disabled = false;
-    this.updateButtonContent();
+    // Ensure minimum spinner duration
+    const elapsed = this.minSpinnerStartTime ? Date.now() - this.minSpinnerStartTime : 0;
+    const minDuration = 500;
+    const remainingTime = Math.max(0, minDuration - elapsed);
 
-    // Reset to idle after 2s
-    this.clearTimeout();
-    this.timeoutId = window.setTimeout(() => {
-      this.state = 'idle';
+    setTimeout(() => {
+      this.state = 'timeout';
+      this.buttonEl.disabled = false;
       this.updateButtonContent();
-    }, 2000);
+
+      // Reset to idle after 2s
+      this.clearTimeout();
+      this.timeoutId = window.setTimeout(() => {
+        this.state = 'idle';
+        this.updateButtonContent();
+      }, 2000);
+    }, remainingTime);
   }
 
   /**
@@ -166,50 +190,30 @@ export class SyncButton {
         this.buttonEl.createSpan({
           cls: 'bible-ref-sync-spinner'
         });
-        this.buttonEl.createSpan({
-          text: this.i18n.t('syncButtonSyncing'),
-          cls: 'bible-ref-sync-text'
-        });
         break;
 
       case 'success':
         this.buttonEl.addClass('bible-ref-sync-success');
         const successIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
         setIcon(successIcon, 'check');
-        this.buttonEl.createSpan({
-          text: this.i18n.t('syncButtonSynced'),
-          cls: 'bible-ref-sync-text'
-        });
         break;
 
       case 'error':
         this.buttonEl.addClass('bible-ref-sync-error');
         const errorIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
         setIcon(errorIcon, 'x');
-        this.buttonEl.createSpan({
-          text: this.i18n.t('syncButtonError'),
-          cls: 'bible-ref-sync-text'
-        });
         break;
 
       case 'timeout':
         this.buttonEl.addClass('bible-ref-sync-timeout');
         const timeoutIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
         setIcon(timeoutIcon, 'clock');
-        this.buttonEl.createSpan({
-          text: this.i18n.t('syncButtonTimeout'),
-          cls: 'bible-ref-sync-text'
-        });
         break;
 
       default:
         // idle
         const syncIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
         setIcon(syncIcon, 'refresh-cw');
-        this.buttonEl.createSpan({
-          text: this.i18n.t('syncButtonSync'),
-          cls: 'bible-ref-sync-text'
-        });
         break;
     }
   }

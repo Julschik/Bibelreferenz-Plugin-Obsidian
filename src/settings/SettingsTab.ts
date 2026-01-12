@@ -1,8 +1,13 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import type { Plugin } from 'obsidian';
-import type { BibleRefSettings, LinkBehavior } from '../types';
+import type { BibleRefSettings, LinkBehavior, BookMapping, CustomBookMappingsV2 } from '../types';
+import type BibleRefPlugin from '../main';
 import type { I18nService } from '../i18n/I18nService';
 import { LANGUAGE_PRESETS } from './presets';
+import { CollapsibleSection } from './components/CollapsibleSection';
+import { BookMappingEditor } from './components/BookMappingEditor';
+import { BOOK_MAPPINGS_DE } from '../data/bookMappings.de';
+import { BOOK_MAPPINGS_EN } from '../data/bookMappings.en';
+import { getBooksByTestament } from '../data/testamentStructure';
 
 /**
  * SettingsTab
@@ -11,15 +16,16 @@ import { LANGUAGE_PRESETS } from './presets';
  * Vollständig lokalisiert über I18nService.
  */
 export class BibleRefSettingsTab extends PluginSettingTab {
-  plugin: Plugin;
+  plugin: BibleRefPlugin;
   settings: BibleRefSettings;
   i18n: I18nService;
   onSettingsChange: (settings: BibleRefSettings) => Promise<void>;
   onSyncAll?: () => Promise<void>;
+  private bookEditors: Map<string, BookMappingEditor> = new Map();
 
   constructor(
     app: App,
-    plugin: Plugin,
+    plugin: BibleRefPlugin,
     settings: BibleRefSettings,
     i18n: I18nService,
     onSettingsChange: (settings: BibleRefSettings) => Promise<void>,
@@ -36,6 +42,9 @@ export class BibleRefSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+
+    // Clear editor cache when re-rendering entire UI
+    this.bookEditors.clear();
 
     // ═══════════════════════════════════════════════════════════════
     // UI LANGUAGE (at the very top)
@@ -293,21 +302,11 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: this.i18n.t('settingsAdvancedSection') });
 
-    new Setting(containerEl)
-      .setName('Custom Book Mappings')
-      .setDesc('JSON: {"Alias": "BookId"}')
-      .addTextArea(text => text
-        .setPlaceholder('{}')
-        .setValue(JSON.stringify(this.settings.customBookMappings, null, 2))
-        .onChange(async (value) => {
-          try {
-            this.settings.customBookMappings = JSON.parse(value || '{}');
-            await this.saveSettings();
-          } catch (error) {
-            // Invalid JSON - ignore until valid
-          }
-        })
-      );
+    // Visual Book Mappings Editor
+    this.renderVisualBookMappingsEditor(containerEl);
+
+    // JSON Editor (collapsible, for advanced users)
+    this.renderJsonMappingsEditor(containerEl);
 
     // ═══════════════════════════════════════════════════════════════
     // INFO & TIPS
@@ -326,6 +325,149 @@ export class BibleRefSettingsTab extends PluginSettingTab {
       text: this.i18n.t('settingsInfoDesc'),
       cls: 'setting-item-description'
     });
+  }
+
+  private renderVisualBookMappingsEditor(containerEl: HTMLElement): void {
+    const section = containerEl.createDiv('bible-ref-visual-mappings-section');
+
+    section.createEl('h3', { text: this.i18n.t('settingsBookMappingsVisual') });
+    section.createEl('p', {
+      text: this.i18n.t('settingsBookMappingsVisualDesc'),
+      cls: 'setting-item-description'
+    });
+
+    // Get current language mappings
+    const mappings = this.settings.language === 'en'
+      ? BOOK_MAPPINGS_EN
+      : BOOK_MAPPINGS_DE;
+
+    // Old Testament section
+    this.renderTestamentSection(section, 'old', mappings);
+
+    // New Testament section
+    this.renderTestamentSection(section, 'new', mappings);
+  }
+
+  private renderTestamentSection(
+    containerEl: HTMLElement,
+    testament: 'old' | 'new',
+    mappings: BookMapping[]
+  ): void {
+    const testamentDiv = containerEl.createDiv('bible-ref-testament-section');
+
+    const title = testament === 'old'
+      ? this.i18n.t('settingsOldTestament')
+      : this.i18n.t('settingsNewTestament');
+
+    const collapsible = new CollapsibleSection(testamentDiv, {
+      title,
+      defaultExpanded: false,
+      icon: testament === 'old' ? 'book' : 'book-open'
+    });
+
+    const contentEl = collapsible.getContentElement();
+
+    // Get books for this testament
+    const bookIds = getBooksByTestament(testament);
+
+    for (const bookId of bookIds) {
+      const mapping = mappings.find(m => m.canonicalId === bookId);
+      if (!mapping) continue;
+
+      this.renderBookSection(contentEl, mapping);
+    }
+  }
+
+  private renderBookSection(containerEl: HTMLElement, mapping: BookMapping): void {
+    const bookDiv = containerEl.createDiv('bible-ref-book-section');
+
+    const collapsible = new CollapsibleSection(bookDiv, {
+      title: `${mapping.canonicalId} - ${mapping.aliases[0]}`,
+      defaultExpanded: false,
+      onToggle: (expanded) => {
+        if (expanded) {
+          // Check if editor already exists
+          let editor = this.bookEditors.get(mapping.canonicalId);
+
+          if (!editor) {
+            // First time: create editor
+            editor = this.renderBookEditor(collapsible.getContentElement(), mapping);
+            this.bookEditors.set(mapping.canonicalId, editor);
+          } else {
+            // Re-expand: update editor with latest data
+            const customization = this.settings.customBookMappingsV2?.[mapping.canonicalId];
+            editor.update(customization);
+          }
+        }
+      }
+    });
+  }
+
+  private renderBookEditor(containerEl: HTMLElement, mapping: BookMapping): BookMappingEditor {
+    const customization = this.settings.customBookMappingsV2?.[mapping.canonicalId];
+
+    const editor = new BookMappingEditor(containerEl, {
+      bookMapping: mapping,
+      customization,
+      i18n: this.i18n,
+      onChange: async (updatedCustomization) => {
+        // Update settings
+        if (!this.settings.customBookMappingsV2) {
+          this.settings.customBookMappingsV2 = {};
+        }
+
+        this.settings.customBookMappingsV2[mapping.canonicalId] = updatedCustomization;
+
+        // Clean up empty customizations
+        if (!updatedCustomization.aliasesAdditions?.length &&
+            !updatedCustomization.aliasesDeletions?.length &&
+            !updatedCustomization.standalonePatternsAdditions?.length &&
+            !updatedCustomization.standalonePatternsDeletions?.length) {
+          delete this.settings.customBookMappingsV2[mapping.canonicalId];
+        }
+
+        await this.saveSettings();
+
+        // Update editor immediately with new state
+        editor.update(updatedCustomization);
+      }
+    });
+
+    return editor;
+  }
+
+  private renderJsonMappingsEditor(containerEl: HTMLElement): void {
+    const section = containerEl.createDiv('bible-ref-json-mappings-section');
+
+    const collapsible = new CollapsibleSection(section, {
+      title: this.i18n.t('settingsBookMappingsJson'),
+      defaultExpanded: false
+    });
+
+    const contentEl = collapsible.getContentElement();
+
+    contentEl.createEl('p', {
+      text: this.i18n.t('settingsBookMappingsJsonDesc'),
+      cls: 'setting-item-description'
+    });
+
+    // JSON textarea (advanced editing)
+    new Setting(contentEl)
+      .setName('Custom Book Mappings V2 (JSON)')
+      .setDesc('Advanced: Edit the raw JSON structure')
+      .addTextArea(text => text
+        .setPlaceholder('{}')
+        .setValue(JSON.stringify(this.settings.customBookMappingsV2 || {}, null, 2))
+        .onChange(async (value) => {
+          try {
+            this.settings.customBookMappingsV2 = JSON.parse(value || '{}');
+            await this.saveSettings();
+          } catch (error) {
+            // Invalid JSON - ignore until valid
+            console.warn('Invalid JSON in custom mappings:', error);
+          }
+        })
+      );
   }
 
   async saveSettings(): Promise<void> {

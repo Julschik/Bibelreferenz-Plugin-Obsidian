@@ -37,11 +37,53 @@ export interface SeparatorConfig {
 export type LinkBehavior = 'same-tab' | 'new-tab' | 'split';
 
 /**
+ * Customization for a single Bible book's mappings
+ * Tracks both user additions and deletions of default mappings
+ */
+export interface BookMappingCustomization {
+  canonicalId: string;                          // e.g., "Gen", "Joh", "Col"
+  aliasesAdditions?: string[];                  // User-added aliases (short forms)
+  aliasesDeletions?: string[];                  // Deleted default aliases
+  standalonePatternsAdditions?: string[];       // User-added standalone patterns (long forms)
+  standalonePatternsDeletions?: string[];       // Deleted default standalone patterns
+  pinnedDisplayId?: string;                     // Pinned alias/pattern (e.g., "Mt" for Matthew)
+  pinnedDisplayIdSource?: 'alias' | 'standalone';  // Which field the pinned ID comes from
+}
+
+/**
+ * V2 custom book mappings structure
+ * Maps canonical book ID to customization
+ */
+export type CustomBookMappingsV2 = Record<string, BookMappingCustomization>;
+
+/**
  * Sync timeout configuration
  */
 export interface SyncTimeout {
   singleFileMs: number;  // Default: 30000 (30s)
   fullVaultMs: number;   // Default: 300000 (5 min)
+}
+
+/**
+ * Migration task for changing canonical IDs
+ */
+export interface CanonicalIdMigration {
+  bookId: string;           // Original canonical ID (e.g., "Mat")
+  oldId: string;            // Old display ID
+  newId: string;            // New display ID (e.g., "Mt")
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  startedAt?: number;       // Timestamp
+  completedAt?: number;     // Timestamp
+  filesProcessed: number;
+  filesTotal: number;
+}
+
+/**
+ * Migration queue state
+ */
+export interface MigrationQueueState {
+  migrations: CanonicalIdMigration[];
+  isRunning: boolean;
 }
 
 /**
@@ -74,7 +116,11 @@ export interface BibleRefSettings {
   syncTimeout: SyncTimeout;     // Default: { singleFileMs: 30000, fullVaultMs: 300000 }
 
   // Custom mappings
-  customBookMappings: Record<string, string>;
+  customBookMappings: Record<string, string>;    // V1 - Deprecated, kept for migration
+  customBookMappingsV2?: CustomBookMappingsV2;   // V2 - New structure with additions and deletions
+
+  // Migration queue for canonical ID changes
+  migrationQueue?: MigrationQueueState;
 }
 
 // ═══════════════════════════════════════════════════════════════

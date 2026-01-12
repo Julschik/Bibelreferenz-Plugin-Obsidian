@@ -67,7 +67,7 @@ export class ParallelVersesTab {
     // Render parallel verses sorted by count
     const sorted = [...coOccurrences.entries()].sort((a, b) => b[1].count - a[1].count);
 
-    const listEl = containerEl.createDiv('bible-ref-parallel-list');
+    const listEl = containerEl.createDiv('bible-ref-expandable-list');
 
     for (const [verseKey, data] of sorted) {
       this.renderParallelVerse(listEl, verseKey, data);
@@ -104,10 +104,10 @@ export class ParallelVersesTab {
     verseKey: string,
     data: CoOccurrenceData
   ): void {
-    const itemEl = containerEl.createDiv('bible-ref-parallel-item bible-ref-expandable');
+    const itemEl = containerEl.createDiv('bible-ref-expandable');
 
     // Header row (clickable to expand)
-    const headerEl = itemEl.createDiv('bible-ref-parallel-header');
+    const headerEl = itemEl.createDiv('bible-ref-expandable-header');
 
     // Expand/collapse icon
     const expandIcon = headerEl.createSpan({ cls: 'bible-ref-expand-icon' });

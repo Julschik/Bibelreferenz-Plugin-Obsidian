@@ -1,7 +1,9 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, setIcon } from 'obsidian';
 import type { BibleRefSettings } from '../../types';
 import type { I18nService } from '../../i18n/I18nService';
 import { BIBLE_BOOK_ORDER } from '../../data/bibleStructure';
+import { getBookMappingDE } from '../../data/bookMappings.de';
+import { getBookMappingEN } from '../../data/bookMappings.en';
 
 /**
  * ReferenceIndex
@@ -143,7 +145,10 @@ export class GlobalBrowserTab {
 
     const sortedBooks = this.getSortedBooks();
     for (const bookId of sortedBooks) {
-      bookSelect.createEl('option', { text: bookId, value: bookId });
+      bookSelect.createEl('option', {
+        text: this.getBookDisplayName(bookId),
+        value: bookId
+      });
     }
 
     if (this.selectedBook) {
@@ -252,8 +257,8 @@ export class GlobalBrowserTab {
       isPrefix = true;
     }
 
-    // Find matching files
-    const matchingFiles = this.findFilesWithTag(searchTag, isPrefix);
+    // Find matching files with their associated verses
+    const fileVersesMap = this.findFilesWithVerses(searchTag, isPrefix);
 
     // Header
     resultsEl.createEl('h4', {
@@ -261,36 +266,91 @@ export class GlobalBrowserTab {
       cls: 'bible-ref-results-header'
     });
 
-    if (matchingFiles.length === 0) {
+    if (fileVersesMap.size === 0) {
       resultsEl.createEl('p', {
         text: this.i18n.t('sidebarNoOtherNotes'),
         cls: 'bible-ref-empty-hint'
       });
     } else {
-      const listEl = resultsEl.createEl('ul', { cls: 'bible-ref-note-list' });
+      const listEl = resultsEl.createDiv('bible-ref-expandable-list');
 
-      for (const file of matchingFiles) {
-        const li = listEl.createEl('li');
-        const link = li.createEl('a', {
-          text: file.basename,
-          cls: 'bible-ref-note-link'
-        });
-        const openFile = () => this.openNote(file);
-        link.addEventListener('click', (e: unknown) => {
-          const event = e as { preventDefault: () => void };
-          event.preventDefault();
-          openFile();
-        });
+      for (const [verse, files] of fileVersesMap) {
+        this.renderVerseItem(listEl, verse, files);
       }
     }
   }
 
   /**
-   * Find files containing a specific tag
+   * Render a single verse with expandable list of notes that contain it
    */
-  private findFilesWithTag(tag: string, isPrefix: boolean): TFile[] {
-    const results: TFile[] = [];
+  private renderVerseItem(
+    containerEl: HTMLElement,
+    verse: string,
+    files: TFile[]
+  ): void {
+    const itemEl = containerEl.createDiv('bible-ref-expandable');
+
+    // Header row (clickable to expand)
+    const headerEl = itemEl.createDiv('bible-ref-expandable-header');
+
+    // Expand/collapse icon
+    const expandIcon = headerEl.createSpan({ cls: 'bible-ref-expand-icon' });
+    setIcon(expandIcon, 'chevron-right');
+
+    // Verse display
+    headerEl.createEl('span', {
+      text: verse,
+      cls: 'bible-ref-parallel-verse'
+    });
+
+    // File count
+    headerEl.createEl('span', {
+      text: this.i18n.t('sidebarParallelCount', { count: files.length }),
+      cls: 'bible-ref-parallel-count'
+    });
+
+    // Expandable content (initially hidden)
+    const contentEl = itemEl.createDiv('bible-ref-parallel-files');
+    contentEl.style.display = 'none';
+
+    // Create note list
+    const listEl = contentEl.createEl('ul', { cls: 'bible-ref-note-list' });
+    for (const file of files) {
+      const li = listEl.createEl('li');
+      const link = li.createEl('a', {
+        text: file.basename,
+        cls: 'bible-ref-note-link'
+      });
+      link.addEventListener('click', (e: unknown) => {
+        const event = e as { preventDefault: () => void; stopPropagation: () => void };
+        event.preventDefault();
+        event.stopPropagation();
+        this.openNote(file);
+      });
+    }
+
+    // Toggle expand/collapse
+    headerEl.addEventListener('click', () => {
+      const isExpanded = contentEl.style.display !== 'none';
+      contentEl.style.display = isExpanded ? 'none' : 'block';
+      setIcon(expandIcon, isExpanded ? 'chevron-right' : 'chevron-down');
+      if (isExpanded) {
+        itemEl.removeClass('expanded');
+      } else {
+        itemEl.addClass('expanded');
+      }
+    });
+  }
+
+  /**
+   * Find files with verses - returns map of verse text → array of files
+   * Inverted from file → verses to verse → files structure
+   */
+  private findFilesWithVerses(tag: string, isPrefix: boolean): Map<string, TFile[]> {
+    const results = new Map<string, TFile[]>();
     const files = this.app.vault.getMarkdownFiles();
+
+    const sep = this.settings.separators.chapterVerse || ',';
 
     for (const file of files) {
       const cache = this.app.metadataCache.getFileCache(file);
@@ -299,16 +359,40 @@ export class GlobalBrowserTab {
       const refs = cache.frontmatter[this.settings.frontmatterKey];
       if (!refs || !Array.isArray(refs)) continue;
 
-      const hasMatch = isPrefix
-        ? refs.some((t: string) => t.startsWith(tag))
-        : refs.includes(tag);
+      for (const t of refs) {
+        const isMatch = isPrefix ? t.startsWith(tag) : t === tag;
+        if (isMatch) {
+          // Extract verse reference from tag
+          const tagContent = t.slice(this.settings.tagPrefix.length);
+          const parts = tagContent.split('/');
+          if (parts.length === 3) {
+            const [bookId, chapter, verse] = parts;
+            const verseText = `${bookId} ${chapter}${sep}${verse}`;
 
-      if (hasMatch) {
-        results.push(file);
+            // Add file to verse's list instead of verse to file's list
+            if (!results.has(verseText)) {
+              results.set(verseText, []);
+            }
+            results.get(verseText)!.push(file);
+          }
+        }
       }
     }
 
     return results;
+  }
+
+  /**
+   * Get display name for a book ID
+   * Returns full book name (e.g., "Johannes") instead of abbreviation (e.g., "Joh")
+   */
+  private getBookDisplayName(bookId: string): string {
+    const mapping = this.settings.uiLanguage === 'de'
+      ? getBookMappingDE(bookId)
+      : getBookMappingEN(bookId);
+
+    // Return first alias (typically the full name) or fall back to bookId
+    return mapping?.aliases[0] || bookId;
   }
 
   /**

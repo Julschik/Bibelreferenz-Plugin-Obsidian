@@ -35,27 +35,16 @@
   flex: 1;
 }
 
-/* ───────────────────────────────────────────────────────────────
-   SYNC BUTTON
-   ─────────────────────────────────────────────────────────────── */
-
-.bible-ref-sync-button {
-  padding: 6px 12px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background: var(--interactive-normal);
-  color: var(--text-normal);
-  font-size: 12px;
-  cursor: pointer;
+.bible-ref-header-buttons {
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.bible-ref-sync-button:hover {
-  background: var(--interactive-hover);
-}
+/* ───────────────────────────────────────────────────────────────
+   SYNC BUTTON - Let clickable-icon handle base styling
+   ─────────────────────────────────────────────────────────────── */
 
 .bible-ref-sync-button:disabled {
   opacity: 0.5;
@@ -68,49 +57,36 @@
   justify-content: center;
 }
 
-.bible-ref-sync-icon svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2;
-}
-
-.bible-ref-sync-text {
-  line-height: 1;
-}
-
 /* Sync Button States */
 .bible-ref-sync-loading {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
-  border-color: var(--interactive-accent);
 }
 
 .bible-ref-sync-success {
   background: var(--color-green);
   color: var(--text-on-accent);
-  border-color: var(--color-green);
 }
 
 .bible-ref-sync-error {
   background: var(--color-red);
   color: var(--text-on-accent);
-  border-color: var(--color-red);
 }
 
 .bible-ref-sync-timeout {
   background: var(--color-orange);
   color: var(--text-on-accent);
-  border-color: var(--color-orange);
 }
 
 /* Spinner Animation */
 .bible-ref-sync-spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--background-modifier-border);
-  border-top-color: var(--text-on-accent);
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text-on-accent);
   border-radius: 50%;
-  animation: bible-ref-spin 0.8s linear infinite;
+  border-top-color: transparent;
+  animation: bible-ref-spin 0.6s linear infinite;
 }
 
 @keyframes bible-ref-spin {
@@ -120,25 +96,49 @@
 }
 
 /* ───────────────────────────────────────────────────────────────
+   EXPAND/COLLAPSE ALL BUTTON - Let clickable-icon handle styling
+   ─────────────────────────────────────────────────────────────── */
+
+.bible-ref-expand-all-button {
+  transition: transform 0.1s ease;
+}
+
+.bible-ref-expand-all-button:active {
+  transform: scale(0.95);
+}
+
+.bible-ref-expand-all-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ───────────────────────────────────────────────────────────────
    TAB BAR
    ─────────────────────────────────────────────────────────────── */
 
 .bible-ref-tabs {
   display: flex;
-  border-bottom: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+  background: transparent;
+  padding: 4px;
+  gap: 4px;
 }
 
 .bible-ref-tab {
   flex: 1;
-  padding: 10px 8px;
-  background: none;
-  border: none;
+  padding: 8px 12px;
+  margin: 0;
+  background: none !important;
+  border: none !important;
+  border-radius: 4px;
+  box-shadow: none !important;
+  outline: none;
   cursor: pointer;
   color: var(--text-muted);
-  border-bottom: 2px solid transparent;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -146,17 +146,16 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .bible-ref-tab:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
+  background: var(--background-modifier-hover) !important;
 }
 
 .bible-ref-tab.active {
   color: var(--text-normal);
-  border-bottom-color: var(--interactive-accent);
+  background: var(--background-modifier-hover) !important;
 }
 
 .bible-ref-tab .tab-icon {
@@ -224,73 +223,36 @@
 }
 
 /* ───────────────────────────────────────────────────────────────
-   REFERENCE GROUPS (Direct References Tab)
+   EXPANDABLE LIST (Shared by Direct References & Parallel Verses)
    ─────────────────────────────────────────────────────────────── */
 
-.bible-ref-group {
-  margin-bottom: 16px;
-}
-
-.bible-ref-group h4,
-.bible-ref-verse-header {
-  margin: 0 0 8px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-accent);
-}
-
-.bible-ref-note-list {
-  margin: 0;
-  padding: 0 0 0 16px;
-  list-style: none;
-}
-
-.bible-ref-note-list li {
-  padding: 4px 0;
-}
-
-.bible-ref-note-link {
-  color: var(--text-normal);
-  text-decoration: none;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.bible-ref-note-link:hover {
-  color: var(--text-accent);
-  text-decoration: underline;
-}
-
-/* ───────────────────────────────────────────────────────────────
-   PARALLEL VERSES TAB
-   ─────────────────────────────────────────────────────────────── */
-
-.bible-ref-parallel-list {
+.bible-ref-expandable-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
-.bible-ref-parallel-item {
-  background: var(--background-secondary);
+.bible-ref-expandable {
+  background: transparent;
   border-radius: 4px;
 }
 
-.bible-ref-parallel-item.expanded {
-  background: var(--background-secondary-alt, var(--background-secondary));
+.bible-ref-expandable.expanded {
+  background: var(--background-secondary);
 }
 
-/* Expandable header */
-.bible-ref-parallel-header {
+/* Expandable header (shared style) */
+.bible-ref-expandable-header {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   cursor: pointer;
   border-radius: 4px;
+  user-select: none;
 }
 
-.bible-ref-parallel-header:hover {
+.bible-ref-expandable-header:hover {
   background: var(--background-modifier-hover);
 }
 
@@ -305,6 +267,42 @@
   width: 12px;
   height: 12px;
 }
+
+/* ───────────────────────────────────────────────────────────────
+   NOTE LIST STYLES (shared by all list views)
+   ─────────────────────────────────────────────────────────────── */
+
+.bible-ref-note-list {
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.bible-ref-note-list li {
+  padding: 4px 0 !important;
+  margin: 0 !important;
+}
+
+.bible-ref-note-link {
+  color: var(--text-normal);
+  text-decoration: none;
+  font-size: 13px;
+  cursor: pointer;
+  display: block !important;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.bible-ref-note-link:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  text-decoration: none;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   PARALLEL VERSES TAB & EXPANDABLE CONTENT
+   ─────────────────────────────────────────────────────────────── */
 
 .bible-ref-parallel-verse {
   font-size: 13px;
@@ -503,7 +501,8 @@
 }
 
 .theme-dark .bible-ref-file-info,
-.theme-dark .bible-ref-parallel-item {
+.theme-dark .bible-ref-parallel-item,
+.theme-dark .bible-ref-group {
   background: var(--background-primary-alt);
 }
 
@@ -548,4 +547,225 @@
 /* Alternative selectors for different Obsidian versions */
 .metadata-property[data-property-key="_bible_refs"] {
   display: none !important;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   PILL INPUT COMPONENT (Book Mappings Visual Editor)
+   ─────────────────────────────────────────────────────────────── */
+
+.bible-ref-pill-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  min-height: 38px;
+}
+
+.bible-ref-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+
+.bible-ref-pill-remove {
+  display: none;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.bible-ref-pill-remove:hover {
+  opacity: 1;
+}
+
+.bible-ref-pill:hover .bible-ref-pill-remove {
+  display: inline-flex;
+}
+
+.bible-ref-pill-remove svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Pill actions container (Pin and Remove buttons) */
+.bible-ref-pill-actions {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.bible-ref-pill:hover .bible-ref-pill-actions {
+  display: inline-flex;
+}
+
+/* Pin button */
+.bible-ref-pill-pin {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.bible-ref-pill-pin:hover {
+  opacity: 1;
+}
+
+.bible-ref-pill-pin svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Pinned pill appearance */
+.bible-ref-pill.pinned {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: 2px solid var(--interactive-accent);
+  font-weight: 600;
+}
+
+.bible-ref-pill.pinned.default {
+  /* Override default gray for pinned pills */
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* Pin icon in pinned pill */
+.bible-ref-pill.pinned .bible-ref-pill-pin {
+  opacity: 1;
+  color: var(--text-on-accent);
+}
+
+.bible-ref-pill-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+  font-size: 13px;
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+}
+
+.bible-ref-pill-input::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Field description text */
+.bible-ref-field-description {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   COLLAPSIBLE SECTION COMPONENT
+   ─────────────────────────────────────────────────────────────── */
+
+.bible-ref-section-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-normal);
+  flex: 1;
+}
+
+.bible-ref-section-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.bible-ref-section-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.bible-ref-expandable-content {
+  padding: 12px 10px 8px 30px;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   BOOK MAPPING EDITOR STYLES
+   ─────────────────────────────────────────────────────────────── */
+
+.bible-ref-mapping-field {
+  margin-bottom: 12px;
+}
+
+.bible-ref-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Testament sections */
+.bible-ref-testament-section {
+  margin-bottom: 16px;
+}
+
+.bible-ref-testament-section .bible-ref-expandable-header {
+  font-weight: 600;
+}
+
+/* Book sections (nested) */
+.bible-ref-book-section {
+  margin-bottom: 8px;
+}
+
+.bible-ref-book-section .bible-ref-expandable-header {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+/* Search filter */
+.bible-ref-book-search {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.bible-ref-book-search:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+/* Dark mode adjustments */
+.theme-dark .bible-ref-pill.default {
+  background: var(--background-primary);
+}
+
+.theme-dark .bible-ref-pill-container {
+  background: var(--background-primary);
 }
