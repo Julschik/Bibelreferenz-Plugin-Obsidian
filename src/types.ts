@@ -5,13 +5,22 @@ import { TFile } from 'obsidian';
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Synchronization modes for frontmatter updates
+ * @deprecated Use SyncOptions instead. Kept for migration compatibility.
  */
 export type SyncMode =
   | 'on-save-or-change'  // Default: On save OR file change
   | 'on-save'            // Only on save (Ctrl+S)
   | 'on-file-change'     // Only when switching to another document
   | 'manual';            // Only via Command Palette or Sidebar button
+
+/**
+ * Sync options as checkboxes (replaces SyncMode dropdown)
+ * Allows flexible combinations of sync triggers
+ */
+export interface SyncOptions {
+  onSave: boolean;        // Sync on Ctrl+S / Cmd+S
+  onFileChange: boolean;  // Sync when switching to another file
+}
 
 /**
  * Configuration for different separators used in Bible references
@@ -23,17 +32,49 @@ export interface SeparatorConfig {
 }
 
 /**
+ * Link behavior options for sidebar links
+ */
+export type LinkBehavior = 'same-tab' | 'new-tab' | 'split';
+
+/**
+ * Sync timeout configuration
+ */
+export interface SyncTimeout {
+  singleFileMs: number;  // Default: 30000 (30s)
+  fullVaultMs: number;   // Default: 300000 (5 min)
+}
+
+/**
  * Main plugin settings
  */
 export interface BibleRefSettings {
-  syncMode: SyncMode;
+  // UI Language
+  uiLanguage: 'de' | 'en';
+
+  // Sync options (checkboxes)
+  syncOptions: SyncOptions;
+
+  // Format settings
   language: 'de' | 'en' | 'custom';
   separators: SeparatorConfig;
-  frontmatterKey: string;       // Default: "bible-refs"
+
+  // Frontmatter settings
+  frontmatterKey: string;       // Default: "_bible_refs"
   tagPrefix: string;            // Default: "bible/"
-  customBookMappings: Record<string, string>;
+  writeToTagsField: boolean;    // Default: false - Also write to 'tags' field for graph view
+
+  // Parsing options
   parseCodeBlocks: boolean;     // Default: false
   parseTitles: boolean;         // Default: true
+
+  // UI Behavior
+  linkBehavior: LinkBehavior;   // Default: "same-tab"
+
+  // Sync timeout
+  syncTimeout: SyncTimeout;     // Default: { singleFileMs: 30000, fullVaultMs: 300000 }
+
+  // Custom mappings
+  customBookMappings: Record<string, string>;
 }
 
 // ═══════════════════════════════════════════════════════════════

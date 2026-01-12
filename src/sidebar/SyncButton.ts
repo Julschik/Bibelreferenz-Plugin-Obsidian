@@ -1,3 +1,6 @@
+import { setIcon } from 'obsidian';
+import type { I18nService } from '../i18n/I18nService';
+
 /**
  * Sync Button Component
  *
@@ -10,20 +13,23 @@
  * Architecture:
  * - Reine UI-Komponente ohne Business Logic
  * - Callback-basiert für Sync-Action
+ * - Vollständig lokalisiert über I18nService
  */
 export class SyncButton {
   private containerEl: HTMLElement;
   private buttonEl: HTMLButtonElement;
   private onSyncCallback: () => Promise<void>;
+  private i18n: I18nService;
   private timeoutId: number | null = null;
 
   /**
    * State der Button-Komponente
    */
-  private state: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+  private state: 'idle' | 'loading' | 'success' | 'error' | 'timeout' = 'idle';
 
-  constructor(containerEl: HTMLElement, onSync: () => Promise<void>) {
+  constructor(containerEl: HTMLElement, i18n: I18nService, onSync: () => Promise<void>) {
     this.containerEl = containerEl;
+    this.i18n = i18n;
     this.onSyncCallback = onSync;
 
     this.render();
@@ -38,7 +44,7 @@ export class SyncButton {
     this.buttonEl = this.containerEl.createEl('button', {
       cls: 'bible-ref-sync-button',
       attr: {
-        'aria-label': 'Sync current file'
+        'aria-label': this.i18n.t('syncButtonSync')
       }
     });
 
@@ -121,6 +127,23 @@ export class SyncButton {
   }
 
   /**
+   * Set Timeout State
+   * Zeigt Timeout-Icon für 2 Sekunden.
+   */
+  setTimeoutState(): void {
+    this.state = 'timeout';
+    this.buttonEl.disabled = false;
+    this.updateButtonContent();
+
+    // Reset to idle after 2s
+    this.clearTimeout();
+    this.timeoutId = window.setTimeout(() => {
+      this.state = 'idle';
+      this.updateButtonContent();
+    }, 2000);
+  }
+
+  /**
    * Update Button Content
    * Aktualisiert das Icon und den Text basierend auf dem State.
    */
@@ -132,7 +155,8 @@ export class SyncButton {
     this.buttonEl.removeClass(
       'bible-ref-sync-loading',
       'bible-ref-sync-success',
-      'bible-ref-sync-error'
+      'bible-ref-sync-error',
+      'bible-ref-sync-timeout'
     );
 
     // Set content based on state
@@ -143,43 +167,47 @@ export class SyncButton {
           cls: 'bible-ref-sync-spinner'
         });
         this.buttonEl.createSpan({
-          text: 'Syncing...',
+          text: this.i18n.t('syncButtonSyncing'),
           cls: 'bible-ref-sync-text'
         });
         break;
 
       case 'success':
         this.buttonEl.addClass('bible-ref-sync-success');
+        const successIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
+        setIcon(successIcon, 'check');
         this.buttonEl.createSpan({
-          text: '✓',
-          cls: 'bible-ref-sync-icon'
-        });
-        this.buttonEl.createSpan({
-          text: 'Synced',
+          text: this.i18n.t('syncButtonSynced'),
           cls: 'bible-ref-sync-text'
         });
         break;
 
       case 'error':
         this.buttonEl.addClass('bible-ref-sync-error');
+        const errorIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
+        setIcon(errorIcon, 'x');
         this.buttonEl.createSpan({
-          text: '✗',
-          cls: 'bible-ref-sync-icon'
+          text: this.i18n.t('syncButtonError'),
+          cls: 'bible-ref-sync-text'
         });
+        break;
+
+      case 'timeout':
+        this.buttonEl.addClass('bible-ref-sync-timeout');
+        const timeoutIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
+        setIcon(timeoutIcon, 'clock');
         this.buttonEl.createSpan({
-          text: 'Error',
+          text: this.i18n.t('syncButtonTimeout'),
           cls: 'bible-ref-sync-text'
         });
         break;
 
       default:
         // idle
+        const syncIcon = this.buttonEl.createSpan({ cls: 'bible-ref-sync-icon' });
+        setIcon(syncIcon, 'refresh-cw');
         this.buttonEl.createSpan({
-          text: '↻',
-          cls: 'bible-ref-sync-icon'
-        });
-        this.buttonEl.createSpan({
-          text: 'Sync',
+          text: this.i18n.t('syncButtonSync'),
           cls: 'bible-ref-sync-text'
         });
         break;

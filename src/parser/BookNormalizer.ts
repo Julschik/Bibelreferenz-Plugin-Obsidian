@@ -142,9 +142,10 @@ export class BookNormalizer {
           // Escape regex special characters and create word-boundary pattern
           // Note: Using (^|\\s|$) instead of \\b because \\b doesn't work correctly
           // with umlauts in JavaScript. Pattern matches word at start, after space, or standalone.
-          // Note: NOT using 'g' flag to avoid lastIndex issues when testing multiple times
+          // CRITICAL: Must use 'g' flag for exec() to advance through the string
+          // Without 'g', exec() always returns the first match, causing infinite loops!
           const escaped = escapeRegex(pattern);
-          const regex = new RegExp(`(^|\\s)${escaped}($|\\s)`, 'i');
+          const regex = new RegExp(`(^|\\s)${escaped}($|\\s)`, 'gi');
 
           patterns.push({
             pattern: regex,

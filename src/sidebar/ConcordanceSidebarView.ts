@@ -1,27 +1,41 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownView } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, setIcon } from 'obsidian';
 import type BibleRefPlugin from '../main';
-import type { ParsedReference } from '../types';
+import type { ExpandedReference } from '../types';
 import { SyncButton } from './SyncButton';
+import { DirectReferencesTab } from './tabs/DirectReferencesTab';
+import { ParallelVersesTab } from './tabs/ParallelVersesTab';
+import { GlobalBrowserTab } from './tabs/GlobalBrowserTab';
 
 /**
  * Bible Reference Concordance Sidebar View
  *
- * Zeigt:
- * - Alle Bible References der aktuellen Datei
- * - Related Notes (Concordance)
- * - Sync Button
+ * Redesigned with 3 tabs:
+ * - Tab 1: Direct References (notes sharing verses with current)
+ * - Tab 2: Parallels (co-occurrence based)
+ * - Tab 3: All (global browser)
  *
  * Architecture:
  * - ItemView ist die Basis-Klasse für Sidebar-Views in Obsidian
- * - Wird über this.plugin registriert und in die Right Sidebar geladen
+ * - Tab components handle their own rendering
  */
 export const VIEW_TYPE_CONCORDANCE = 'bible-ref-concordance';
+
+type TabId = 'direct' | 'parallel' | 'global';
 
 export class ConcordanceSidebarView extends ItemView {
   private plugin: BibleRefPlugin;
   private syncButton: SyncButton;
   private currentFile: TFile | null = null;
-  private currentReferences: ParsedReference[] = [];
+  private currentReferences: ExpandedReference[] = [];
+  private activeTab: TabId = 'direct';
+
+  // Tab components
+  private directTab: DirectReferencesTab;
+  private parallelTab: ParallelVersesTab;
+  private globalTab: GlobalBrowserTab;
+
+  // UI elements
+  private tabContentEl: HTMLElement;
 
   constructor(leaf: WorkspaceLeaf, plugin: BibleRefPlugin) {
     super(leaf);
@@ -30,7 +44,6 @@ export class ConcordanceSidebarView extends ItemView {
 
   /**
    * View Type Identifier
-   * Wird von Obsidian verwendet, um View zu identifizieren.
    */
   getViewType(): string {
     return VIEW_TYPE_CONCORDANCE;
@@ -38,15 +51,13 @@ export class ConcordanceSidebarView extends ItemView {
 
   /**
    * Display Text
-   * Der Titel, der im Sidebar-Tab angezeigt wird.
    */
   getDisplayText(): string {
-    return 'Bible References';
+    return this.plugin.i18n.t('sidebarTitle');
   }
 
   /**
    * Icon
-   * Das Icon für den Sidebar-Tab.
    */
   getIcon(): string {
     return 'book-open';
@@ -54,43 +65,42 @@ export class ConcordanceSidebarView extends ItemView {
 
   /**
    * onOpen
-   * Wird aufgerufen, wenn die View geöffnet wird.
-   * Hier bauen wir die UI auf.
    */
   async onOpen(): Promise<void> {
     const { contentEl } = this;
-
-    // Clear existing content
     contentEl.empty();
+    contentEl.addClass('bible-ref-sidebar');
 
-    // Add CSS class for styling
-    contentEl.addClass('bible-ref-concordance-view');
+    // Initialize tab components
+    this.directTab = new DirectReferencesTab(this.app, this.plugin.i18n, this.plugin.settings);
+    this.parallelTab = new ParallelVersesTab(this.app, this.plugin.i18n, this.plugin.settings);
+    this.globalTab = new GlobalBrowserTab(this.app, this.plugin.i18n, this.plugin.settings);
 
-    // Create header container
+    // Create header
     const headerEl = contentEl.createDiv('bible-ref-header');
-
-    // Create title
-    const titleEl = headerEl.createEl('h4', {
-      text: 'Bible References',
+    headerEl.createEl('h4', {
+      text: this.plugin.i18n.t('sidebarTitle'),
       cls: 'bible-ref-title'
     });
 
     // Create sync button
-    this.syncButton = new SyncButton(headerEl, async () => {
+    this.syncButton = new SyncButton(headerEl, this.plugin.i18n, async () => {
       await this.syncCurrentFile();
     });
 
-    // Create content container
-    const contentContainer = contentEl.createDiv('bible-ref-content');
+    // Create tab bar
+    this.renderTabBar(contentEl);
 
-    // Register event: File opened/switched
+    // Create tab content area
+    this.tabContentEl = contentEl.createDiv('bible-ref-tab-content');
+
+    // Register events
     this.registerEvent(
       this.app.workspace.on('file-open', (file) => {
         this.onFileOpen(file);
       })
     );
 
-    // Register event: File modified (for live updates)
     this.registerEvent(
       this.app.workspace.on('editor-change', (editor, view) => {
         if (view instanceof MarkdownView && view.file) {
@@ -99,64 +109,134 @@ export class ConcordanceSidebarView extends ItemView {
       })
     );
 
-    // Initial load: Get currently active file
+    // Initial load
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile) {
       await this.onFileOpen(activeFile);
     } else {
-      this.renderEmptyState(contentContainer);
+      this.renderActiveTab();
     }
   }
 
   /**
    * onClose
-   * Wird aufgerufen, wenn die View geschlossen wird.
    */
   async onClose(): Promise<void> {
-    // Cleanup
     if (this.syncButton) {
       this.syncButton.destroy();
     }
   }
 
   /**
+   * Render tab bar
+   */
+  private renderTabBar(containerEl: HTMLElement): void {
+    const tabBarEl = containerEl.createDiv('bible-ref-tabs');
+
+    const tabs: { id: TabId; labelKey: 'sidebarTabDirect' | 'sidebarTabParallel' | 'sidebarTabGlobal'; icon: string }[] = [
+      { id: 'direct', labelKey: 'sidebarTabDirect', icon: 'book-open' },
+      { id: 'parallel', labelKey: 'sidebarTabParallel', icon: 'link' },
+      { id: 'global', labelKey: 'sidebarTabGlobal', icon: 'search' }
+    ];
+
+    for (const tab of tabs) {
+      const tabEl = tabBarEl.createEl('button', {
+        cls: `bible-ref-tab ${this.activeTab === tab.id ? 'active' : ''}`,
+        attr: {
+          'data-tab': tab.id,
+          'aria-label': this.plugin.i18n.t(tab.labelKey)
+        }
+      });
+
+      const iconSpan = tabEl.createSpan({ cls: 'tab-icon' });
+      setIcon(iconSpan, tab.icon);
+      tabEl.createSpan({ text: this.plugin.i18n.t(tab.labelKey), cls: 'tab-text' });
+
+      tabEl.addEventListener('click', () => {
+        this.activeTab = tab.id;
+        this.updateTabBar(tabBarEl);
+        this.renderActiveTab();
+      });
+    }
+  }
+
+  /**
+   * Update tab bar active state
+   */
+  private updateTabBar(tabBarEl: HTMLElement): void {
+    const tabs = tabBarEl.querySelectorAll('.bible-ref-tab');
+    tabs.forEach((tabEl) => {
+      const tabId = tabEl.getAttribute('data-tab');
+      if (tabId === this.activeTab) {
+        tabEl.addClass('active');
+      } else {
+        tabEl.removeClass('active');
+      }
+    });
+  }
+
+  /**
+   * Render the active tab content
+   */
+  private renderActiveTab(): void {
+    if (!this.tabContentEl) return;
+
+    // Update tab data
+    this.directTab.setData(this.currentFile, this.currentReferences);
+    this.parallelTab.setData(this.currentFile, this.currentReferences);
+
+    // Update settings in case they changed
+    this.directTab.updateSettings(this.plugin.settings);
+    this.parallelTab.updateSettings(this.plugin.settings);
+    this.globalTab.updateSettings(this.plugin.settings);
+
+    // Render active tab
+    switch (this.activeTab) {
+      case 'direct':
+        this.directTab.render(this.tabContentEl);
+        break;
+      case 'parallel':
+        this.parallelTab.render(this.tabContentEl);
+        break;
+      case 'global':
+        this.globalTab.render(this.tabContentEl);
+        break;
+    }
+  }
+
+  /**
    * File Opened Event
-   * Wird aufgerufen, wenn eine neue Datei geöffnet wird.
    */
   private async onFileOpen(file: TFile | null): Promise<void> {
     this.currentFile = file;
 
     if (!file) {
-      this.renderEmptyState();
+      this.currentReferences = [];
+      this.renderActiveTab();
       return;
     }
 
-    // Load references from cache or parse
     await this.loadReferences(file);
-    this.render();
+    this.renderActiveTab();
   }
 
   /**
    * File Modified Event
-   * Wird aufgerufen, wenn die aktuelle Datei geändert wird (live updates).
    */
   private async onFileModified(file: TFile): Promise<void> {
     if (this.currentFile?.path !== file.path) {
       return;
     }
 
-    // Reload references (debounced würde hier Sinn machen für Production)
     await this.loadReferences(file);
-    this.render();
+    this.renderActiveTab();
   }
 
   /**
-   * Load References
-   * Lädt die Bible References der aktuellen Datei aus dem Frontmatter.
+   * Load References from frontmatter
    */
   private async loadReferences(file: TFile): Promise<void> {
     try {
-      // Read file cache
       const cache = this.app.metadataCache.getFileCache(file);
 
       if (!cache?.frontmatter) {
@@ -164,8 +244,7 @@ export class ConcordanceSidebarView extends ItemView {
         return;
       }
 
-      // Get frontmatter key from settings
-      const frontmatterKey = this.plugin.settings.frontmatterKey || 'bible-refs';
+      const frontmatterKey = this.plugin.settings.frontmatterKey || '_bible_refs';
       const refs = cache.frontmatter[frontmatterKey];
 
       if (!refs || !Array.isArray(refs)) {
@@ -173,8 +252,7 @@ export class ConcordanceSidebarView extends ItemView {
         return;
       }
 
-      // Parse tags back to ParsedReference
-      this.currentReferences = this.parseTagsToReferences(refs);
+      this.currentReferences = this.parseTagsToExpandedRefs(refs);
     } catch (error) {
       console.error('Error loading references:', error);
       this.currentReferences = [];
@@ -182,223 +260,40 @@ export class ConcordanceSidebarView extends ItemView {
   }
 
   /**
-   * Parse Tags to References
-   * Konvertiert Tags (z.B. "bible/Col-3-16") zurück zu ParsedReference-Objekten.
+   * Parse tags to ExpandedReference objects
    */
-  private parseTagsToReferences(tags: string[]): ParsedReference[] {
+  private parseTagsToExpandedRefs(tags: string[]): ExpandedReference[] {
     const tagPrefix = this.plugin.settings.tagPrefix || 'bible/';
-    const references: ParsedReference[] = [];
+    const references: ExpandedReference[] = [];
 
     for (const tag of tags) {
       if (!tag.startsWith(tagPrefix)) {
         continue;
       }
 
-      // Remove prefix: "bible/Col-3-16" → "Col-3-16"
       const tagContent = tag.slice(tagPrefix.length);
+      const parts = tagContent.split('/');
 
-      // Parse format: "BookId-Chapter-Verse" or "BookId-Chapter"
-      const parts = tagContent.split('-');
-
-      if (parts.length === 0) {
+      if (parts.length !== 3) {
         continue;
       }
 
       const bookId = parts[0];
-      const chapter = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-      const verse = parts.length > 2 ? parseInt(parts[2], 10) : undefined;
+      const chapter = parseInt(parts[1], 10);
+      const verse = parseInt(parts[2], 10);
 
-      // Determine granularity
-      let granularity: 'book' | 'chapter' | 'verse' = 'book';
-      if (verse !== undefined) {
-        granularity = 'verse';
-      } else if (chapter !== undefined) {
-        granularity = 'chapter';
+      if (isNaN(chapter) || isNaN(verse)) {
+        continue;
       }
 
-      references.push({
-        raw: tagContent,
-        bookId,
-        granularity,
-        startChapter: chapter,
-        startVerse: verse
-      });
+      references.push({ bookId, chapter, verse });
     }
 
     return references;
   }
 
   /**
-   * Render
-   * Rendert die komplette Sidebar UI basierend auf currentReferences.
-   */
-  private render(): void {
-    const contentContainer = this.contentEl.querySelector('.bible-ref-content');
-
-    if (!contentContainer) {
-      return;
-    }
-
-    // Clear content
-    contentContainer.empty();
-
-    // If no file or no references
-    if (!this.currentFile || this.currentReferences.length === 0) {
-      this.renderEmptyState(contentContainer);
-      return;
-    }
-
-    // Render file info
-    this.renderFileInfo(contentContainer);
-
-    // Render references list
-    this.renderReferencesList(contentContainer);
-
-    // TODO Phase 6: Related Notes (Concordance)
-    // this.renderRelatedNotes(contentContainer);
-  }
-
-  /**
-   * Render Empty State
-   * Zeigt eine Meldung, wenn keine Referenzen vorhanden sind.
-   */
-  private renderEmptyState(container?: Element): void {
-    const target = container || this.contentEl.querySelector('.bible-ref-content');
-
-    if (!target) {
-      return;
-    }
-
-    target.empty();
-
-    const emptyEl = target.createDiv('bible-ref-empty');
-    emptyEl.createEl('p', {
-      text: 'No Bible references found',
-      cls: 'bible-ref-empty-text'
-    });
-    emptyEl.createEl('p', {
-      text: 'Open a note with Bible references to see them here.',
-      cls: 'bible-ref-empty-subtext'
-    });
-  }
-
-  /**
-   * Render File Info
-   * Zeigt den Dateinamen und die Anzahl der Referenzen.
-   */
-  private renderFileInfo(container: Element): void {
-    const fileInfoEl = container.createDiv('bible-ref-file-info');
-
-    const fileName = this.currentFile?.basename || 'Unknown';
-    const refCount = this.currentReferences.length;
-
-    fileInfoEl.createEl('div', {
-      text: fileName,
-      cls: 'bible-ref-file-name'
-    });
-
-    fileInfoEl.createEl('div', {
-      text: `${refCount} reference${refCount !== 1 ? 's' : ''}`,
-      cls: 'bible-ref-count'
-    });
-  }
-
-  /**
-   * Render References List
-   * Zeigt alle Bible References als Liste.
-   */
-  private renderReferencesList(container: Element): void {
-    const listEl = container.createDiv('bible-ref-list');
-
-    // Group by book for better UX
-    const groupedRefs = this.groupReferencesByBook(this.currentReferences);
-
-    for (const [bookId, refs] of Object.entries(groupedRefs)) {
-      // Create book group
-      const bookGroupEl = listEl.createDiv('bible-ref-book-group');
-
-      // Book header
-      const bookHeaderEl = bookGroupEl.createDiv('bible-ref-book-header');
-      bookHeaderEl.createEl('strong', {
-        text: bookId,
-        cls: 'bible-ref-book-name'
-      });
-
-      // Reference items
-      const refItemsEl = bookGroupEl.createDiv('bible-ref-items');
-
-      for (const ref of refs) {
-        const refItemEl = refItemsEl.createDiv('bible-ref-item');
-
-        // Format display text
-        const displayText = this.formatReferenceDisplay(ref);
-
-        refItemEl.createEl('span', {
-          text: displayText,
-          cls: 'bible-ref-text'
-        });
-
-        // Clickable: Scroll to reference in document (optional enhancement)
-        refItemEl.addClass('bible-ref-clickable');
-        refItemEl.addEventListener('click', () => {
-          this.onReferenceClick(ref);
-        });
-      }
-    }
-  }
-
-  /**
-   * Group References by Book
-   * Gruppiert Referenzen nach Buch für bessere Übersichtlichkeit.
-   */
-  private groupReferencesByBook(refs: ParsedReference[]): Record<string, ParsedReference[]> {
-    const grouped: Record<string, ParsedReference[]> = {};
-
-    for (const ref of refs) {
-      if (!grouped[ref.bookId]) {
-        grouped[ref.bookId] = [];
-      }
-      grouped[ref.bookId].push(ref);
-    }
-
-    return grouped;
-  }
-
-  /**
-   * Format Reference Display
-   * Formatiert eine Referenz für die Anzeige (z.B. "3:16" oder "3").
-   */
-  private formatReferenceDisplay(ref: ParsedReference): string {
-    const sep = this.plugin.settings.separators.chapterVerse || ',';
-
-    if (ref.granularity === 'verse' && ref.startChapter && ref.startVerse) {
-      // Range?
-      if (ref.endVerse && ref.endVerse !== ref.startVerse) {
-        return `${ref.startChapter}${sep}${ref.startVerse}-${ref.endVerse}`;
-      }
-      return `${ref.startChapter}${sep}${ref.startVerse}`;
-    }
-
-    if (ref.granularity === 'chapter' && ref.startChapter) {
-      return `${ref.startChapter}`;
-    }
-
-    return '(entire book)';
-  }
-
-  /**
-   * Reference Click Handler
-   * Wird aufgerufen, wenn auf eine Referenz geklickt wird.
-   * Könnte z.B. zur Referenz im Dokument scrollen.
-   */
-  private onReferenceClick(ref: ParsedReference): void {
-    // TODO Phase 6: Implement scroll-to-reference or open related notes
-    console.log('Reference clicked:', ref);
-  }
-
-  /**
    * Sync Current File
-   * Synchronisiert die aktuell geöffnete Datei.
    */
   private async syncCurrentFile(): Promise<void> {
     if (!this.currentFile) {
@@ -409,12 +304,14 @@ export class ConcordanceSidebarView extends ItemView {
 
     try {
       const result = await this.plugin.syncManager.syncFile(this.currentFile);
-
-      // Reload references
       await this.loadReferences(this.currentFile);
-      this.render();
+      this.renderActiveTab();
 
-      this.syncButton.setSuccess();
+      if (result.timeout) {
+        this.syncButton.setTimeoutState();
+      } else {
+        this.syncButton.setSuccess();
+      }
     } catch (error) {
       console.error('Error syncing file:', error);
       this.syncButton.setError();

@@ -143,9 +143,15 @@ describe('BookNormalizer', () => {
 
         expect(genPatterns.length).toBeGreaterThan(0);
 
+        // Helper to test pattern with lastIndex reset (required for global regexes)
+        const testPattern = (pattern: RegExp, str: string): boolean => {
+          pattern.lastIndex = 0;
+          return pattern.test(str);
+        };
+
         // At least one pattern should match these strings
-        expect(genPatterns.some(p => p.pattern.test('Siehe Genesis'))).toBe(true);
-        expect(genPatterns.some(p => p.pattern.test('Genesis Text'))).toBe(true);
+        expect(genPatterns.some(p => testPattern(p.pattern, 'Siehe Genesis'))).toBe(true);
+        expect(genPatterns.some(p => testPattern(p.pattern, 'Genesis Text'))).toBe(true);
 
         // Should NOT match partial words (if properly implemented with \b)
         // This depends on the exact pattern implementation

@@ -1,29 +1,36 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { Plugin } from 'obsidian';
-import type { BibleRefSettings, SyncMode } from '../types';
+import type { BibleRefSettings, LinkBehavior } from '../types';
+import type { I18nService } from '../i18n/I18nService';
 import { LANGUAGE_PRESETS } from './presets';
 
 /**
  * SettingsTab
  *
  * Obsidian Settings UI für das Bible Reference Mapper Plugin.
- * Ermöglicht User die Konfiguration aller Plugin-Einstellungen.
+ * Vollständig lokalisiert über I18nService.
  */
 export class BibleRefSettingsTab extends PluginSettingTab {
   plugin: Plugin;
   settings: BibleRefSettings;
-  onSettingsChange: (settings: BibleRefSettings) => void;
+  i18n: I18nService;
+  onSettingsChange: (settings: BibleRefSettings) => Promise<void>;
+  onSyncAll?: () => Promise<void>;
 
   constructor(
     app: App,
     plugin: Plugin,
     settings: BibleRefSettings,
-    onSettingsChange: (settings: BibleRefSettings) => void
+    i18n: I18nService,
+    onSettingsChange: (settings: BibleRefSettings) => Promise<void>,
+    onSyncAll?: () => Promise<void>
   ) {
     super(app, plugin);
     this.plugin = plugin;
     this.settings = settings;
+    this.i18n = i18n;
     this.onSettingsChange = onSettingsChange;
+    this.onSyncAll = onSyncAll;
   }
 
   display(): void {
@@ -31,40 +38,110 @@ export class BibleRefSettingsTab extends PluginSettingTab {
     containerEl.empty();
 
     // ═══════════════════════════════════════════════════════════════
-    // SYNC BEHAVIOR
+    // UI LANGUAGE (at the very top)
     // ═══════════════════════════════════════════════════════════════
 
-    containerEl.createEl('h2', { text: 'Sync Behavior' });
+    containerEl.createEl('h2', { text: this.i18n.t('settingsLanguageSection') });
 
     new Setting(containerEl)
-      .setName('Sync Mode')
-      .setDesc('Wann sollen Bibelreferenzen automatisch synchronisiert werden?')
+      .setName(this.i18n.t('settingsUiLanguage'))
+      .setDesc(this.i18n.t('settingsUiLanguageDesc'))
       .addDropdown(dropdown => dropdown
-        .addOption('on-save-or-change', 'On Save or File Change (Empfohlen)')
-        .addOption('on-save', 'On Save Only (Ctrl+S)')
-        .addOption('on-file-change', 'On File Change Only')
-        .addOption('manual', 'Manual Only (Command Palette)')
-        .setValue(this.settings.syncMode)
+        .addOption('de', 'Deutsch')
+        .addOption('en', 'English')
+        .setValue(this.settings.uiLanguage)
         .onChange(async (value) => {
-          this.settings.syncMode = value as SyncMode;
+          this.settings.uiLanguage = value as 'de' | 'en';
+          this.i18n.setLocale(value as 'de' | 'en');
           await this.saveSettings();
+          this.display(); // Refresh UI with new language
         })
       );
 
     // ═══════════════════════════════════════════════════════════════
-    // LANGUAGE & SEPARATORS
+    // SYNC OPTIONS (Checkboxes)
     // ═══════════════════════════════════════════════════════════════
 
-    containerEl.createEl('h2', { text: 'Language & Format' });
+    containerEl.createEl('h2', { text: this.i18n.t('settingsSyncSection') });
+
+    containerEl.createEl('p', {
+      text: this.i18n.t('settingsSyncTitle'),
+      cls: 'setting-item-description'
+    });
 
     new Setting(containerEl)
-      .setName('Language Preset')
-      .setDesc('Wähle ein vordefiniertes Format oder "Custom" für eigene Separatoren.')
+      .setName(this.i18n.t('syncOnSave'))
+      .setDesc(this.i18n.t('syncOnSaveDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.settings.syncOptions.onSave)
+        .onChange(async (value) => {
+          this.settings.syncOptions.onSave = value;
+          await this.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName(this.i18n.t('syncOnFileChange'))
+      .setDesc(this.i18n.t('syncOnFileChangeDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.settings.syncOptions.onFileChange)
+        .onChange(async (value) => {
+          this.settings.syncOptions.onFileChange = value;
+          await this.saveSettings();
+        })
+      );
+
+    // Hint when both are disabled
+    if (!this.settings.syncOptions.onSave && !this.settings.syncOptions.onFileChange) {
+      containerEl.createEl('p', {
+        text: this.i18n.t('syncManualHint'),
+        cls: 'setting-item-description bible-ref-hint'
+      });
+    }
+
+    // Command hint
+    containerEl.createEl('p', {
+      text: this.i18n.t('settingsSyncCommandHint'),
+      cls: 'setting-item-description bible-ref-hint'
+    });
+
+    // Sync All Files button
+    if (this.onSyncAll) {
+      const syncAllSetting = new Setting(containerEl)
+        .setName(this.i18n.t('settingsSyncAllButton'))
+        .setDesc(this.i18n.t('settingsSyncAllButtonDesc'));
+
+      const buttonEl = syncAllSetting.controlEl.createEl('button', {
+        text: this.i18n.t('settingsSyncAllButtonText'),
+        cls: 'mod-cta'
+      });
+
+      buttonEl.addEventListener('click', async () => {
+        buttonEl.disabled = true;
+        buttonEl.setText(this.i18n.t('syncButtonSyncing'));
+        try {
+          await this.onSyncAll!();
+        } finally {
+          buttonEl.disabled = false;
+          buttonEl.setText(this.i18n.t('settingsSyncAllButtonText'));
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FORMAT (Language preset & separators)
+    // ═══════════════════════════════════════════════════════════════
+
+    containerEl.createEl('h2', { text: this.i18n.t('settingsFormatSection') });
+
+    new Setting(containerEl)
+      .setName(this.i18n.t('settingsLanguagePreset'))
+      .setDesc(this.i18n.t('settingsLanguagePresetDesc'))
       .addDropdown(dropdown => {
         dropdown
-          .addOption('de', `${LANGUAGE_PRESETS.de.name} (${LANGUAGE_PRESETS.de.example})`)
-          .addOption('en', `${LANGUAGE_PRESETS.en.name} (${LANGUAGE_PRESETS.en.example})`)
-          .addOption('custom', 'Custom')
+          .addOption('de', this.i18n.t('presetGerman'))
+          .addOption('en', this.i18n.t('presetEnglish'))
+          .addOption('custom', this.i18n.t('presetCustom'))
           .setValue(this.settings.language)
           .onChange(async (value) => {
             this.settings.language = value as 'de' | 'en' | 'custom';
@@ -78,15 +155,15 @@ export class BibleRefSettingsTab extends PluginSettingTab {
             }
 
             await this.saveSettings();
-            this.display(); // Refresh UI to show/hide custom separators
+            this.display(); // Refresh to show/hide custom separators
           });
       });
 
     // Show custom separator settings only if "custom" is selected
     if (this.settings.language === 'custom') {
       new Setting(containerEl)
-        .setName('Chapter-Verse Separator')
-        .setDesc('Trenner zwischen Kapitel und Vers (z.B. "," oder ":")')
+        .setName(this.i18n.t('settingsChapterVerseSep'))
+        .setDesc(this.i18n.t('settingsChapterVerseSepDesc'))
         .addText(text => text
           .setPlaceholder(',')
           .setValue(this.settings.separators.chapterVerse)
@@ -97,8 +174,8 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName('List Separator (AND)')
-        .setDesc('Trenner für Listen (z.B. "." → 16.18 = Verse 16 und 18)')
+        .setName(this.i18n.t('settingsListSep'))
+        .setDesc(this.i18n.t('settingsListSepDesc'))
         .addText(text => text
           .setPlaceholder('.')
           .setValue(this.settings.separators.list)
@@ -109,8 +186,8 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName('Range Separator (TO)')
-        .setDesc('Trenner für Bereiche (z.B. "-" → 16-18 = Verse 16 bis 18)')
+        .setName(this.i18n.t('settingsRangeSep'))
+        .setDesc(this.i18n.t('settingsRangeSepDesc'))
         .addText(text => text
           .setPlaceholder('-')
           .setValue(this.settings.separators.range)
@@ -122,26 +199,26 @@ export class BibleRefSettingsTab extends PluginSettingTab {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // FRONTMATTER & TAGGING
+    // FRONTMATTER
     // ═══════════════════════════════════════════════════════════════
 
-    containerEl.createEl('h2', { text: 'Frontmatter & Tagging' });
+    containerEl.createEl('h2', { text: this.i18n.t('settingsFrontmatterSection') });
 
     new Setting(containerEl)
-      .setName('Frontmatter Key')
-      .setDesc('Schlüssel für Bibelreferenz-Tags im Frontmatter (z.B. "bible-refs")')
+      .setName(this.i18n.t('settingsFrontmatterKey'))
+      .setDesc(this.i18n.t('settingsFrontmatterKeyDesc'))
       .addText(text => text
-        .setPlaceholder('bible-refs')
+        .setPlaceholder('_bible_refs')
         .setValue(this.settings.frontmatterKey)
         .onChange(async (value) => {
-          this.settings.frontmatterKey = value || 'bible-refs';
+          this.settings.frontmatterKey = value || '_bible_refs';
           await this.saveSettings();
         })
       );
 
     new Setting(containerEl)
-      .setName('Tag Prefix')
-      .setDesc('Präfix für generierte Tags (z.B. "bible/" → bible/Joh/3/16)')
+      .setName(this.i18n.t('settingsTagPrefix'))
+      .setDesc(this.i18n.t('settingsTagPrefixDesc'))
       .addText(text => text
         .setPlaceholder('bible/')
         .setValue(this.settings.tagPrefix)
@@ -151,15 +228,26 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         })
       );
 
+    new Setting(containerEl)
+      .setName(this.i18n.t('settingsWriteToTags'))
+      .setDesc(this.i18n.t('settingsWriteToTagsDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.settings.writeToTagsField)
+        .onChange(async (value) => {
+          this.settings.writeToTagsField = value;
+          await this.saveSettings();
+        })
+      );
+
     // ═══════════════════════════════════════════════════════════════
     // PARSING OPTIONS
     // ═══════════════════════════════════════════════════════════════
 
-    containerEl.createEl('h2', { text: 'Parsing Options' });
+    containerEl.createEl('h2', { text: this.i18n.t('settingsParsingSection') });
 
     new Setting(containerEl)
-      .setName('Parse Titles')
-      .setDesc('Bibelreferenzen im Dateinamen erkennen (z.B. "Joh 3,16.md")')
+      .setName(this.i18n.t('settingsParseTitles'))
+      .setDesc(this.i18n.t('settingsParseTitlesDesc'))
       .addToggle(toggle => toggle
         .setValue(this.settings.parseTitles)
         .onChange(async (value) => {
@@ -169,8 +257,8 @@ export class BibleRefSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Parse Code Blocks')
-      .setDesc('Bibelreferenzen auch in Code-Blöcken erkennen (nicht empfohlen)')
+      .setName(this.i18n.t('settingsParseCodeBlocks'))
+      .setDesc(this.i18n.t('settingsParseCodeBlocksDesc'))
       .addToggle(toggle => toggle
         .setValue(this.settings.parseCodeBlocks)
         .onChange(async (value) => {
@@ -180,16 +268,34 @@ export class BibleRefSettingsTab extends PluginSettingTab {
       );
 
     // ═══════════════════════════════════════════════════════════════
-    // CUSTOM BOOK MAPPINGS
+    // BEHAVIOR
     // ═══════════════════════════════════════════════════════════════
 
-    containerEl.createEl('h2', { text: 'Custom Book Mappings' });
+    containerEl.createEl('h2', { text: this.i18n.t('settingsBehaviorSection') });
+
+    new Setting(containerEl)
+      .setName(this.i18n.t('settingsLinkBehavior'))
+      .setDesc(this.i18n.t('settingsLinkBehaviorDesc'))
+      .addDropdown(dropdown => dropdown
+        .addOption('same-tab', this.i18n.t('linkBehaviorSameTab'))
+        .addOption('new-tab', this.i18n.t('linkBehaviorNewTab'))
+        .addOption('split', this.i18n.t('linkBehaviorSplit'))
+        .setValue(this.settings.linkBehavior)
+        .onChange(async (value) => {
+          this.settings.linkBehavior = value as LinkBehavior;
+          await this.saveSettings();
+        })
+      );
+
+    // ═══════════════════════════════════════════════════════════════
+    // ADVANCED (Custom Mappings)
+    // ═══════════════════════════════════════════════════════════════
+
+    containerEl.createEl('h2', { text: this.i18n.t('settingsAdvancedSection') });
 
     new Setting(containerEl)
       .setName('Custom Book Mappings')
-      .setDesc(
-        'Eigene Abkürzungen definieren (JSON Format). Beispiel: {"Joh": "Johannes", "Mt": "Matthäus"}'
-      )
+      .setDesc('JSON: {"Alias": "BookId"}')
       .addTextArea(text => text
         .setPlaceholder('{}')
         .setValue(JSON.stringify(this.settings.customBookMappings, null, 2))
@@ -198,30 +304,28 @@ export class BibleRefSettingsTab extends PluginSettingTab {
             this.settings.customBookMappings = JSON.parse(value || '{}');
             await this.saveSettings();
           } catch (error) {
-            console.error('Invalid JSON for custom book mappings:', error);
+            // Invalid JSON - ignore until valid
           }
         })
       );
 
     // ═══════════════════════════════════════════════════════════════
-    // INFO SECTION
+    // INFO & TIPS
     // ═══════════════════════════════════════════════════════════════
 
-    containerEl.createEl('h2', { text: 'Info' });
+    containerEl.createEl('h2', { text: this.i18n.t('settingsInfo') });
 
-    const infoDiv = containerEl.createDiv();
-    infoDiv.innerHTML = `
-      <p style="color: var(--text-muted);">
-        <strong>Bible Reference Mapper</strong><br>
-        Automatische Erkennung und Tagging von Bibelreferenzen.<br>
-        <br>
-        <strong>Beispiele:</strong><br>
-        • Deutsch: Joh 3,16-18 → bible/Joh/3/16, bible/Joh/3/17, bible/Joh/3/18<br>
-        • English: John 3:16-18 → bible/Joh/3/16, bible/Joh/3/17, bible/Joh/3/18<br>
-        • Kapitel: Kolosser 3 → Alle Verse in Kol 3<br>
-        • Buch: Kolosserbrief → bible/Col<br>
-      </p>
-    `;
+    // Parallel Tip
+    new Setting(containerEl)
+      .setName(this.i18n.t('settingsParallelTip'))
+      .setDesc(this.i18n.t('settingsParallelTipDesc'));
+
+    // General Info
+    const infoDiv = containerEl.createDiv({ cls: 'bible-ref-info' });
+    infoDiv.createEl('p', {
+      text: this.i18n.t('settingsInfoDesc'),
+      cls: 'setting-item-description'
+    });
   }
 
   async saveSettings(): Promise<void> {
