@@ -7,16 +7,54 @@ import { FrontmatterSync, createFrontmatterSync } from './FrontmatterSync';
 import { DEBOUNCE_DELAY } from '../constants';
 
 /**
+ * Error thrown when sync operation times out
+ */
+export class SyncTimeoutError extends Error {
+  constructor(operation: string, timeoutMs: number) {
+    super(`Sync timeout: ${operation} exceeded ${timeoutMs}ms`);
+    this.name = 'SyncTimeoutError';
+  }
+}
+
+/**
+ * Execute a promise with a timeout
+ * @param promise Promise to execute
+ * @param timeoutMs Timeout in milliseconds
+ * @param operation Operation name for error message
+ * @returns Promise result or throws SyncTimeoutError
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new SyncTimeoutError(operation, timeoutMs));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timeoutId);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
+
+/**
  * SyncManager
  *
  * Manages the synchronization of Bible references to frontmatter.
- * Handles event registration based on sync mode and coordinates all sync operations.
+ * Handles event registration based on sync options and coordinates all sync operations.
  *
- * Sync Modes:
- * - on-save-or-change: Sync on both save (Ctrl+S) and file change (default)
- * - on-save: Only sync on save
- * - on-file-change: Only sync when switching files
- * - manual: No automatic sync (user must trigger via command or button)
+ * Sync Options (checkbox-based):
+ * - onSave: Sync when file is saved (Ctrl+S / Cmd+S)
+ * - onFileChange: Sync when switching to another file
+ * - Both disabled: Manual only (via command or button)
  *
  * Architecture:
  * User writes → Parser detects refs → TagGenerator creates tags → FrontmatterSync writes
@@ -49,39 +87,32 @@ export class SyncManager {
 
     // Create debounced sync function
     this.debouncedSync = debounce(
-      this.syncFileInternal.bind(this),
+      this.syncFileDebounced.bind(this),
       DEBOUNCE_DELAY,
       true // Leading edge: run immediately, then debounce
     );
   }
 
   /**
-   * Register event listeners based on sync mode
+   * Register event listeners based on sync options (checkboxes)
    */
   registerEvents(): void {
     // Clear any existing event listeners
     this.unregisterEvents();
 
-    const mode = this.settings.syncMode;
+    const { syncOptions } = this.settings;
 
-    switch (mode) {
-      case 'on-save-or-change':
-        this.registerSaveEvents();
-        this.registerFileChangeEvents();
-        break;
-
-      case 'on-save':
-        this.registerSaveEvents();
-        break;
-
-      case 'on-file-change':
-        this.registerFileChangeEvents();
-        break;
-
-      case 'manual':
-        // No automatic sync
-        break;
+    // Register save events if onSave is enabled
+    if (syncOptions.onSave) {
+      this.registerSaveEvents();
     }
+
+    // Register file change events if onFileChange is enabled
+    if (syncOptions.onFileChange) {
+      this.registerFileChangeEvents();
+    }
+
+    // If both are disabled: manual only (no automatic sync)
   }
 
   /**
@@ -93,56 +124,95 @@ export class SyncManager {
   }
 
   /**
-   * Sync a single file
+   * Sync a single file (with timeout)
    * @param file File to sync
    * @returns Object with sync status
    */
-  async syncFile(file: TFile): Promise<{ changed: boolean; tagCount: number }> {
+  async syncFile(file: TFile): Promise<{ changed: boolean; tagCount: number; timeout?: boolean }> {
+    const timeoutMs = this.settings.syncTimeout?.singleFileMs ?? 30000;
+
     try {
-      // Skip if frontmatter sync is currently updating (loop prevention)
-      if (this.frontmatterSync.isCurrentlyUpdating) {
-        return { changed: false, tagCount: 0 };
-      }
-
-      // Read file content
-      const content = await this.app.vault.read(file);
-
-      // Parse content for references
-      const contentRefs = this.parser.parse(content);
-
-      // Parse title for references (if enabled)
-      let titleRefs: ParsedReference[] = [];
-      if (this.settings.parseTitles) {
-        titleRefs = this.titleParser.parse(file.basename);
-      }
-
-      // Combine references (title refs + content refs)
-      const allRefs = [...titleRefs, ...contentRefs];
-
-      // Generate tags
-      const tags = this.tagGenerator.generateTags(allRefs);
-
-      // Sync to frontmatter
-      const changed = await this.frontmatterSync.sync(file, tags);
-
-      return { changed, tagCount: tags.length };
+      return await withTimeout(
+        this.syncFileInternal(file),
+        timeoutMs,
+        'single file sync'
+      );
     } catch (error) {
+      if (error instanceof SyncTimeoutError) {
+        console.warn('SyncManager: Timeout syncing file', file.path);
+        return { changed: false, tagCount: 0, timeout: true };
+      }
       console.error('SyncManager: Error syncing file', file.path, error);
       return { changed: false, tagCount: 0 };
     }
   }
 
   /**
-   * Sync all markdown files in the vault
+   * Internal sync implementation (without timeout)
+   */
+  private async syncFileInternal(file: TFile): Promise<{ changed: boolean; tagCount: number }> {
+    // Skip if frontmatter sync is currently updating (loop prevention)
+    if (this.frontmatterSync.isCurrentlyUpdating) {
+      return { changed: false, tagCount: 0 };
+    }
+
+    // Read file content
+    const content = await this.app.vault.read(file);
+
+    // Parse content for references
+    const contentRefs = this.parser.parse(content);
+
+    // Parse title for references (if enabled)
+    let titleRefs: ParsedReference[] = [];
+    if (this.settings.parseTitles) {
+      titleRefs = this.titleParser.parse(file.basename);
+    }
+
+    // Combine references (title refs + content refs)
+    const allRefs = [...titleRefs, ...contentRefs];
+
+    // Generate tags
+    const tags = this.tagGenerator.generateTags(allRefs);
+
+    // Sync to frontmatter
+    const changed = await this.frontmatterSync.sync(file, tags);
+
+    return { changed, tagCount: tags.length };
+  }
+
+  /**
+   * Sync all markdown files in the vault (with timeout)
    * @returns Object with sync statistics
    */
-  async syncAll(): Promise<{ processed: number; changed: number }> {
+  async syncAll(): Promise<{ processed: number; changed: number; timeout?: boolean }> {
+    const timeoutMs = this.settings.syncTimeout?.fullVaultMs ?? 300000;
+
+    try {
+      return await withTimeout(
+        this.syncAllInternal(),
+        timeoutMs,
+        'full vault sync'
+      );
+    } catch (error) {
+      if (error instanceof SyncTimeoutError) {
+        console.warn('SyncManager: Timeout syncing all files');
+        return { processed: 0, changed: 0, timeout: true };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Internal sync all implementation (without timeout)
+   */
+  private async syncAllInternal(): Promise<{ processed: number; changed: number }> {
     const files = this.app.vault.getMarkdownFiles();
     let processed = 0;
     let changed = 0;
 
     for (const file of files) {
-      const result = await this.syncFile(file);
+      // Use internal sync to avoid double-timeout
+      const result = await this.syncFileInternal(file);
       processed++;
       if (result.changed) {
         changed++;
@@ -218,9 +288,9 @@ export class SyncManager {
   }
 
   /**
-   * Internal sync implementation (used by debounced version)
+   * Debounced sync wrapper (used by event handlers)
    */
-  private async syncFileInternal(file: TFile): Promise<void> {
+  private async syncFileDebounced(file: TFile): Promise<void> {
     await this.syncFile(file);
   }
 }

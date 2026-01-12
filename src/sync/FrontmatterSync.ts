@@ -103,19 +103,45 @@ export class FrontmatterSync {
 
   /**
    * Write Bible reference tags to file frontmatter
+   * Optionally also writes to standard 'tags' field for graph view visibility
    * @param file The file to write
    * @param tags Array of tags to write
    */
   private async write(file: TFile, tags: string[]): Promise<void> {
     const key = this.settings.frontmatterKey;
+    const tagPrefix = this.settings.tagPrefix;
+    const writeToTagsField = this.settings.writeToTagsField || false;
 
     await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+      // Write to custom field (_bible_refs)
       if (tags.length === 0) {
-        // Remove the key if no tags
         delete frontmatter[key];
       } else {
-        // Write tags as array
         frontmatter[key] = tags;
+      }
+
+      // Optionally also write to standard 'tags' field for graph view
+      if (writeToTagsField) {
+        // Get existing tags, filter out old Bible tags
+        const existingTags: string[] = Array.isArray(frontmatter.tags)
+          ? frontmatter.tags
+          : (frontmatter.tags ? [frontmatter.tags] : []);
+
+        const nonBibleTags = existingTags.filter(
+          (t: unknown) => typeof t === 'string' && !t.startsWith(tagPrefix)
+        );
+
+        if (tags.length === 0) {
+          // Keep only non-Bible tags
+          if (nonBibleTags.length === 0) {
+            delete frontmatter.tags;
+          } else {
+            frontmatter.tags = nonBibleTags;
+          }
+        } else {
+          // Merge non-Bible tags with new Bible tags
+          frontmatter.tags = [...nonBibleTags, ...tags];
+        }
       }
     });
   }

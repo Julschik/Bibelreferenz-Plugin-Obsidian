@@ -335,19 +335,3 @@ npm run build
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
-
----
-
-## Acknowledgments
-
-- Built for the [Obsidian](https://obsidian.md/) community
-- Inspired by the need for low-friction Bible study workflows
-- *Soli Deo Gloria*
-
----
-
-## Support
-
-- [Report Issues](https://github.com/Julschik/bible-reference-mapper/issues)
-- [Feature Requests](https://github.com/Julschik/bible-reference-mapper/discussions)
-- [Documentation](https://github.com/Julschik/bible-reference-mapper/wiki)
