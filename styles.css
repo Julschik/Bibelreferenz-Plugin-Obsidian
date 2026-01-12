@@ -769,3 +769,205 @@
 .theme-dark .bible-ref-pill-container {
   background: var(--background-primary);
 }
+
+/* ───────────────────────────────────────────────────────────────
+   SETTINGS COLLAPSIBLE SECTION
+   ─────────────────────────────────────────────────────────────── */
+
+.bible-ref-settings-section {
+  margin-bottom: 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bible-ref-settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  background: var(--background-secondary);
+  transition: background-color 0.15s ease;
+}
+
+.bible-ref-settings-section-header:hover {
+  background: var(--background-modifier-hover);
+}
+
+.bible-ref-settings-section-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.bible-ref-settings-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.bible-ref-settings-section-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.bible-ref-settings-section-content {
+  padding: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.bible-ref-settings-section.expanded .bible-ref-settings-section-header {
+  background: var(--background-secondary);
+}
+
+/* Danger Zone */
+.bible-ref-danger-zone {
+  border-left: 3px solid var(--text-error);
+  padding-left: 12px;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   QUICK SETTINGS POPUP (Sidebar)
+   ─────────────────────────────────────────────────────────────── */
+
+/* Overlay that darkens the sidebar content */
+.bible-ref-quick-settings-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+/* Popup container */
+.bible-ref-quick-settings-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
+  max-width: 280px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 11;
+  overflow: hidden;
+}
+
+/* Popup header */
+.bible-ref-quick-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.bible-ref-quick-settings-header span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.bible-ref-quick-settings-close {
+  padding: 4px !important;
+}
+
+/* Popup content */
+.bible-ref-quick-settings-content {
+  padding: 16px;
+}
+
+/* Toggle row */
+.bible-ref-quick-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 12px;
+}
+
+.bible-ref-quick-settings-label {
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.bible-ref-quick-settings-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Section title */
+.bible-ref-quick-settings-section {
+  margin-bottom: 16px;
+}
+
+.bible-ref-quick-settings-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Radio options */
+.bible-ref-quick-settings-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.bible-ref-quick-settings-option:hover {
+  background: var(--background-modifier-hover);
+}
+
+.bible-ref-quick-settings-option.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.bible-ref-quick-settings-option.is-selected input[type="radio"] {
+  accent-color: var(--text-on-accent);
+}
+
+.bible-ref-quick-settings-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.bible-ref-quick-settings-option span {
+  font-size: 13px;
+}
+
+/* Sync section */
+.bible-ref-quick-settings-sync {
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.bible-ref-quick-settings-sync-btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+/* Active button state */
+.bible-ref-quick-settings-button.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}

@@ -51,7 +51,12 @@ export class FrontmatterSync {
       const existingTags = await this.read(file);
 
       // Check if tags have changed
-      if (this.areTagsEqual(existingTags, newTags)) {
+      const tagsEqual = this.areTagsEqual(existingTags, newTags);
+
+      // Also check if granularity setting has changed (when writeToTagsField is enabled)
+      const granularityChanged = await this.hasGranularityChanged(file);
+
+      if (tagsEqual && !granularityChanged) {
         return false; // No changes needed
       }
 
@@ -65,6 +70,35 @@ export class FrontmatterSync {
     } finally {
       // ALWAYS reset the flag, even if an error occurs
       this.isUpdating = false;
+    }
+  }
+
+  /**
+   * Check if the granularity setting has changed since last sync
+   * @param file The file to check
+   * @returns true if granularity has changed and update is needed
+   */
+  private async hasGranularityChanged(file: TFile): Promise<boolean> {
+    // Only relevant when writeToTagsField is enabled
+    if (!this.settings.writeToTagsField) {
+      return false;
+    }
+
+    try {
+      const cache = this.app.metadataCache.getFileCache(file);
+      const frontmatter = cache?.frontmatter;
+
+      if (!frontmatter) return false;
+
+      const storedGranularity = frontmatter['_bible_refs_granularity'];
+      const currentGranularity = this.settings.graphTagGranularity || 'verse';
+
+      // If no stored granularity, update is needed to store it
+      if (!storedGranularity) return true;
+
+      return storedGranularity !== currentGranularity;
+    } catch {
+      return false;
     }
   }
 
@@ -102,6 +136,24 @@ export class FrontmatterSync {
   }
 
   /**
+   * Truncate a tag based on granularity setting
+   * @param tag Full tag (e.g., "bible/Joh/3/16")
+   * @param granularity Target granularity level
+   * @returns Truncated tag (e.g., "bible/Joh/3" for chapter granularity)
+   */
+  private truncateTag(tag: string, granularity: 'book' | 'chapter' | 'verse'): string {
+    const parts = tag.split('/');
+    switch (granularity) {
+      case 'book':
+        return parts.slice(0, 2).join('/');     // bible/Joh
+      case 'chapter':
+        return parts.slice(0, 3).join('/');     // bible/Joh/3
+      default:
+        return tag;                              // bible/Joh/3/16
+    }
+  }
+
+  /**
    * Write Bible reference tags to file frontmatter
    * Optionally also writes to standard 'tags' field for graph view visibility
    * @param file The file to write
@@ -111,9 +163,10 @@ export class FrontmatterSync {
     const key = this.settings.frontmatterKey;
     const tagPrefix = this.settings.tagPrefix;
     const writeToTagsField = this.settings.writeToTagsField || false;
+    const granularity = this.settings.graphTagGranularity || 'verse';
 
     await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-      // Write to custom field (_bible_refs)
+      // Write to custom field (_bible_refs) - always full granularity
       if (tags.length === 0) {
         delete frontmatter[key];
       } else {
@@ -122,6 +175,9 @@ export class FrontmatterSync {
 
       // Optionally also write to standard 'tags' field for graph view
       if (writeToTagsField) {
+        // Store granularity for change detection
+        frontmatter['_bible_refs_granularity'] = granularity;
+
         // Get existing tags, filter out old Bible tags
         const existingTags: string[] = Array.isArray(frontmatter.tags)
           ? frontmatter.tags
@@ -139,9 +195,16 @@ export class FrontmatterSync {
             frontmatter.tags = nonBibleTags;
           }
         } else {
-          // Merge non-Bible tags with new Bible tags
-          frontmatter.tags = [...nonBibleTags, ...tags];
+          // Truncate tags based on granularity and deduplicate
+          const truncatedTags = [...new Set(
+            tags.map(tag => this.truncateTag(tag, granularity))
+          )];
+          // Merge non-Bible tags with truncated Bible tags
+          frontmatter.tags = [...nonBibleTags, ...truncatedTags];
         }
+      } else {
+        // Clean up granularity field if writeToTagsField is disabled
+        delete frontmatter['_bible_refs_granularity'];
       }
     });
   }

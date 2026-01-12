@@ -1,9 +1,11 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import type { BibleRefSettings, LinkBehavior, BookMapping, CustomBookMappingsV2 } from '../types';
+import type { BibleRefSettings, LinkBehavior, BookMapping } from '../types';
 import type BibleRefPlugin from '../main';
 import type { I18nService } from '../i18n/I18nService';
 import { LANGUAGE_PRESETS } from './presets';
+import { createDefaultSettings } from './defaultSettings';
 import { CollapsibleSection } from './components/CollapsibleSection';
+import { SettingsCollapsibleSection } from './components/SettingsCollapsibleSection';
 import { BookMappingEditor } from './components/BookMappingEditor';
 import { BOOK_MAPPINGS_DE } from '../data/bookMappings.de';
 import { BOOK_MAPPINGS_EN } from '../data/bookMappings.en';
@@ -47,12 +49,66 @@ export class BibleRefSettingsTab extends PluginSettingTab {
     this.bookEditors.clear();
 
     // ═══════════════════════════════════════════════════════════════
-    // UI LANGUAGE (at the very top)
+    // LANGUAGE SECTION
     // ═══════════════════════════════════════════════════════════════
+    this.renderLanguageSection(containerEl);
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsLanguageSection') });
+    // ═══════════════════════════════════════════════════════════════
+    // SYNC SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderSyncSection(containerEl);
 
-    new Setting(containerEl)
+    // ═══════════════════════════════════════════════════════════════
+    // FORMAT SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderFormatSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // FRONTMATTER SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderFrontmatterSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // GRAPH VIEW SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderGraphViewSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // PARSING SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderParsingSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // BEHAVIOR SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderBehaviorSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // ADVANCED SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderAdvancedSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // INFO SECTION
+    // ═══════════════════════════════════════════════════════════════
+    this.renderInfoSection(containerEl);
+
+    // ═══════════════════════════════════════════════════════════════
+    // RESET TO DEFAULT
+    // ═══════════════════════════════════════════════════════════════
+    this.renderResetSection(containerEl);
+  }
+
+  private renderLanguageSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsLanguageSection'),
+      description: this.i18n.t('settingsLanguageSectionDesc'),
+      defaultExpanded: false
+    });
+
+    const contentEl = section.getContentElement();
+
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsUiLanguage'))
       .setDesc(this.i18n.t('settingsUiLanguageDesc'))
       .addDropdown(dropdown => dropdown
@@ -66,19 +122,23 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           this.display(); // Refresh UI with new language
         })
       );
+  }
 
-    // ═══════════════════════════════════════════════════════════════
-    // SYNC OPTIONS (Checkboxes)
-    // ═══════════════════════════════════════════════════════════════
+  private renderSyncSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsSyncSection'),
+      description: this.i18n.t('settingsSyncSectionDesc'),
+      defaultExpanded: false
+    });
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsSyncSection') });
+    const contentEl = section.getContentElement();
 
-    containerEl.createEl('p', {
+    contentEl.createEl('p', {
       text: this.i18n.t('settingsSyncTitle'),
       cls: 'setting-item-description'
     });
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('syncOnSave'))
       .setDesc(this.i18n.t('syncOnSaveDesc'))
       .addToggle(toggle => toggle
@@ -89,7 +149,7 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         })
       );
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('syncOnFileChange'))
       .setDesc(this.i18n.t('syncOnFileChangeDesc'))
       .addToggle(toggle => toggle
@@ -102,21 +162,21 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
     // Hint when both are disabled
     if (!this.settings.syncOptions.onSave && !this.settings.syncOptions.onFileChange) {
-      containerEl.createEl('p', {
+      contentEl.createEl('p', {
         text: this.i18n.t('syncManualHint'),
         cls: 'setting-item-description bible-ref-hint'
       });
     }
 
     // Command hint
-    containerEl.createEl('p', {
+    contentEl.createEl('p', {
       text: this.i18n.t('settingsSyncCommandHint'),
       cls: 'setting-item-description bible-ref-hint'
     });
 
     // Sync All Files button
     if (this.onSyncAll) {
-      const syncAllSetting = new Setting(containerEl)
+      const syncAllSetting = new Setting(contentEl)
         .setName(this.i18n.t('settingsSyncAllButton'))
         .setDesc(this.i18n.t('settingsSyncAllButtonDesc'));
 
@@ -136,14 +196,18 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         }
       });
     }
+  }
 
-    // ═══════════════════════════════════════════════════════════════
-    // FORMAT (Language preset & separators)
-    // ═══════════════════════════════════════════════════════════════
+  private renderFormatSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsFormatSection'),
+      description: this.i18n.t('settingsFormatSectionDesc'),
+      defaultExpanded: false
+    });
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsFormatSection') });
+    const contentEl = section.getContentElement();
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsLanguagePreset'))
       .setDesc(this.i18n.t('settingsLanguagePresetDesc'))
       .addDropdown(dropdown => {
@@ -170,7 +234,7 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
     // Show custom separator settings only if "custom" is selected
     if (this.settings.language === 'custom') {
-      new Setting(containerEl)
+      new Setting(contentEl)
         .setName(this.i18n.t('settingsChapterVerseSep'))
         .setDesc(this.i18n.t('settingsChapterVerseSepDesc'))
         .addText(text => text
@@ -182,7 +246,7 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           })
         );
 
-      new Setting(containerEl)
+      new Setting(contentEl)
         .setName(this.i18n.t('settingsListSep'))
         .setDesc(this.i18n.t('settingsListSepDesc'))
         .addText(text => text
@@ -194,7 +258,7 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           })
         );
 
-      new Setting(containerEl)
+      new Setting(contentEl)
         .setName(this.i18n.t('settingsRangeSep'))
         .setDesc(this.i18n.t('settingsRangeSepDesc'))
         .addText(text => text
@@ -206,14 +270,18 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           })
         );
     }
+  }
 
-    // ═══════════════════════════════════════════════════════════════
-    // FRONTMATTER
-    // ═══════════════════════════════════════════════════════════════
+  private renderFrontmatterSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsFrontmatterSection'),
+      description: this.i18n.t('settingsFrontmatterSectionDesc'),
+      defaultExpanded: false
+    });
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsFrontmatterSection') });
+    const contentEl = section.getContentElement();
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsFrontmatterKey'))
       .setDesc(this.i18n.t('settingsFrontmatterKeyDesc'))
       .addText(text => text
@@ -225,7 +293,7 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         })
       );
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsTagPrefix'))
       .setDesc(this.i18n.t('settingsTagPrefixDesc'))
       .addText(text => text
@@ -236,8 +304,19 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           await this.saveSettings();
         })
       );
+  }
 
-    new Setting(containerEl)
+  private renderGraphViewSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsGraphViewSection'),
+      description: this.i18n.t('settingsGraphViewSectionDesc'),
+      defaultExpanded: false
+    });
+
+    const contentEl = section.getContentElement();
+
+    // Write to tags field toggle
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsWriteToTags'))
       .setDesc(this.i18n.t('settingsWriteToTagsDesc'))
       .addToggle(toggle => toggle
@@ -245,16 +324,61 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         .onChange(async (value) => {
           this.settings.writeToTagsField = value;
           await this.saveSettings();
+          this.display(); // Refresh to show/hide granularity dropdown
         })
       );
 
-    // ═══════════════════════════════════════════════════════════════
-    // PARSING OPTIONS
-    // ═══════════════════════════════════════════════════════════════
+    // Granularity dropdown (only visible when writeToTagsField is enabled)
+    if (this.settings.writeToTagsField) {
+      new Setting(contentEl)
+        .setName(this.i18n.t('settingsGraphTagGranularity'))
+        .setDesc(this.i18n.t('settingsGraphTagGranularityDesc'))
+        .addDropdown(dropdown => dropdown
+          .addOption('book', this.i18n.t('graphGranularityBook'))
+          .addOption('chapter', this.i18n.t('graphGranularityChapter'))
+          .addOption('verse', this.i18n.t('graphGranularityVerse'))
+          .setValue(this.settings.graphTagGranularity || 'verse')
+          .onChange(async (value) => {
+            this.settings.graphTagGranularity = value as 'book' | 'chapter' | 'verse';
+            await this.saveSettings();
+          })
+        );
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsParsingSection') });
+      // Apply and Sync button
+      if (this.onSyncAll) {
+        const syncSetting = new Setting(contentEl)
+          .setName(this.i18n.t('settingsApplyAndSync'))
+          .setDesc(this.i18n.t('settingsApplyAndSyncDesc'));
 
-    new Setting(containerEl)
+        const buttonEl = syncSetting.controlEl.createEl('button', {
+          text: this.i18n.t('settingsApplyAndSyncButton'),
+          cls: 'mod-cta'
+        });
+
+        buttonEl.addEventListener('click', async () => {
+          buttonEl.disabled = true;
+          buttonEl.setText(this.i18n.t('syncButtonSyncing'));
+          try {
+            await this.onSyncAll!();
+          } finally {
+            buttonEl.disabled = false;
+            buttonEl.setText(this.i18n.t('settingsApplyAndSyncButton'));
+          }
+        });
+      }
+    }
+  }
+
+  private renderParsingSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsParsingSection'),
+      description: this.i18n.t('settingsParsingSectionDesc'),
+      defaultExpanded: false
+    });
+
+    const contentEl = section.getContentElement();
+
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsParseTitles'))
       .setDesc(this.i18n.t('settingsParseTitlesDesc'))
       .addToggle(toggle => toggle
@@ -265,7 +389,7 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         })
       );
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsParseCodeBlocks'))
       .setDesc(this.i18n.t('settingsParseCodeBlocksDesc'))
       .addToggle(toggle => toggle
@@ -275,14 +399,18 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           await this.saveSettings();
         })
       );
+  }
 
-    // ═══════════════════════════════════════════════════════════════
-    // BEHAVIOR
-    // ═══════════════════════════════════════════════════════════════
+  private renderBehaviorSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsBehaviorSection'),
+      description: this.i18n.t('settingsBehaviorSectionDesc'),
+      defaultExpanded: false
+    });
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsBehaviorSection') });
+    const contentEl = section.getContentElement();
 
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsLinkBehavior'))
       .setDesc(this.i18n.t('settingsLinkBehaviorDesc'))
       .addDropdown(dropdown => dropdown
@@ -295,35 +423,77 @@ export class BibleRefSettingsTab extends PluginSettingTab {
           await this.saveSettings();
         })
       );
+  }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ADVANCED (Custom Mappings)
-    // ═══════════════════════════════════════════════════════════════
+  private renderAdvancedSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsAdvancedSection'),
+      description: this.i18n.t('settingsAdvancedSectionDesc'),
+      defaultExpanded: false
+    });
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsAdvancedSection') });
+    const contentEl = section.getContentElement();
 
     // Visual Book Mappings Editor
-    this.renderVisualBookMappingsEditor(containerEl);
+    this.renderVisualBookMappingsEditor(contentEl);
 
     // JSON Editor (collapsible, for advanced users)
-    this.renderJsonMappingsEditor(containerEl);
+    this.renderJsonMappingsEditor(contentEl);
+  }
 
-    // ═══════════════════════════════════════════════════════════════
-    // INFO & TIPS
-    // ═══════════════════════════════════════════════════════════════
+  private renderInfoSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsInfoSection'),
+      description: this.i18n.t('settingsInfoSectionDesc'),
+      defaultExpanded: false
+    });
 
-    containerEl.createEl('h2', { text: this.i18n.t('settingsInfo') });
+    const contentEl = section.getContentElement();
 
     // Parallel Tip
-    new Setting(containerEl)
+    new Setting(contentEl)
       .setName(this.i18n.t('settingsParallelTip'))
       .setDesc(this.i18n.t('settingsParallelTipDesc'));
 
     // General Info
-    const infoDiv = containerEl.createDiv({ cls: 'bible-ref-info' });
+    const infoDiv = contentEl.createDiv({ cls: 'bible-ref-info' });
     infoDiv.createEl('p', {
       text: this.i18n.t('settingsInfoDesc'),
       cls: 'setting-item-description'
+    });
+  }
+
+  private renderResetSection(containerEl: HTMLElement): void {
+    const section = new SettingsCollapsibleSection(containerEl, {
+      title: this.i18n.t('settingsDangerZone'),
+      description: this.i18n.t('settingsDangerZoneDesc'),
+      defaultExpanded: false
+    });
+
+    const contentEl = section.getContentElement();
+    contentEl.addClass('bible-ref-danger-zone');
+
+    const resetSetting = new Setting(contentEl)
+      .setName(this.i18n.t('settingsResetToDefault'))
+      .setDesc(this.i18n.t('settingsResetToDefaultDesc'));
+
+    const buttonEl = resetSetting.controlEl.createEl('button', {
+      text: this.i18n.t('settingsResetToDefaultButton'),
+      cls: 'mod-warning'
+    });
+
+    buttonEl.addEventListener('click', async () => {
+      // Confirmation dialog
+      const confirmed = (globalThis as typeof globalThis & { confirm: (msg: string) => boolean }).confirm(
+        this.i18n.t('settingsResetToDefaultConfirm')
+      );
+      if (!confirmed) return;
+
+      // Reset settings to default
+      const currentLocale = this.i18n.getLocale();
+      this.settings = createDefaultSettings(currentLocale);
+      await this.saveSettings();
+      this.display(); // Refresh UI
     });
   }
 

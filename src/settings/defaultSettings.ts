@@ -35,7 +35,10 @@ export function createDefaultSettings(locale: Locale = 'en'): BibleRefSettings {
     // Frontmatter (underscore prefix for less prominent display in Obsidian)
     frontmatterKey: '_bible_refs',
     tagPrefix: 'bible/',
-    writeToTagsField: false,  // Disabled by default - enable for graph view visibility
+
+    // Graph View settings
+    writeToTagsField: true,         // Enabled by default for graph view visibility
+    graphTagGranularity: 'chapter', // Chapter level by default (less cluttered graph)
 
     // Parsing options
     parseCodeBlocks: false,

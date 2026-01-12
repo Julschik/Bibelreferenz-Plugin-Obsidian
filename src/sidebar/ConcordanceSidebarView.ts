@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, TFile, MarkdownView, setIcon } from 'obsidian'
 import type BibleRefPlugin from '../main';
 import type { ExpandedReference } from '../types';
 import { SyncButton } from './SyncButton';
+import { QuickSettingsButton } from './QuickSettingsButton';
 import { DirectReferencesTab } from './tabs/DirectReferencesTab';
 import { ParallelVersesTab } from './tabs/ParallelVersesTab';
 import { GlobalBrowserTab } from './tabs/GlobalBrowserTab';
@@ -25,6 +26,7 @@ type TabId = 'direct' | 'parallel' | 'global';
 export class ConcordanceSidebarView extends ItemView {
   private plugin: BibleRefPlugin;
   private syncButton: SyncButton;
+  private quickSettingsButton: QuickSettingsButton;
   private currentFile: TFile | null = null;
   private currentReferences: ExpandedReference[] = [];
   private activeTab: TabId = 'direct';
@@ -95,6 +97,16 @@ export class ConcordanceSidebarView extends ItemView {
     this.syncButton = new SyncButton(buttonContainerEl, this.plugin.i18n, async () => {
       await this.syncCurrentFile();
     });
+
+    // Create quick settings button
+    this.quickSettingsButton = new QuickSettingsButton(
+      buttonContainerEl,
+      this.plugin,
+      this.plugin.i18n,
+      async () => {
+        await this.plugin.syncAllFiles();
+      }
+    );
 
     // Create tab bar
     this.renderTabBar(contentEl);
