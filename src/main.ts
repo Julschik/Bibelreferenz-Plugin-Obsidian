@@ -1,11 +1,12 @@
 import { Plugin, TFile, Notice, WorkspaceLeaf } from 'obsidian';
-import type { BibleRefSettings, SyncMode } from './types';
+import type { BibleRefSettings, SyncMode, CustomBookMappingsV2, BookMappingCustomization } from './types';
 import { DEFAULT_SETTINGS, createDefaultSettings } from './settings/defaultSettings';
 import { detectSystemLocale } from './i18n/I18nService';
 import { BibleRefSettingsTab } from './settings/SettingsTab';
 import { SyncManager, createSyncManager } from './sync/SyncManager';
 import { ConcordanceSidebarView, VIEW_TYPE_CONCORDANCE } from './sidebar/ConcordanceSidebarView';
 import { I18nService, createI18nService } from './i18n/I18nService';
+import { MigrationService } from './migration/MigrationService';
 
 /**
  * Bible Reference Mapper Plugin
@@ -20,6 +21,7 @@ export default class BibleRefPlugin extends Plugin {
   settings!: BibleRefSettings;
   syncManager!: SyncManager;
   i18n!: I18nService;
+  migrationService!: MigrationService;
 
   /**
    * Plugin Load
@@ -34,6 +36,16 @@ export default class BibleRefPlugin extends Plugin {
     // Initialize I18nService
     this.i18n = createI18nService(this.settings.uiLanguage);
 
+    // Initialize MigrationService
+    this.migrationService = new MigrationService(
+      this.app,
+      this.settings,
+      this.saveSettings.bind(this)
+    );
+
+    // Resume any pending migrations
+    await this.migrationService.resumeMigrations();
+
     // Initialize SyncManager
     this.syncManager = createSyncManager(this.app, this, this.settings);
 
@@ -45,6 +57,11 @@ export default class BibleRefPlugin extends Plugin {
       VIEW_TYPE_CONCORDANCE,
       (leaf) => new ConcordanceSidebarView(leaf, this)
     );
+
+    // Open sidebar automatically when workspace is ready
+    this.app.workspace.onLayoutReady(() => {
+      this.activateSidebarView();
+    });
 
     // Add ribbon icon to open sidebar
     this.addRibbonIcon('book-open', this.i18n.t('commandOpenSidebar'), () => {
@@ -231,6 +248,42 @@ export default class BibleRefPlugin extends Plugin {
     if (this.settings.syncOptions === undefined) {
       this.settings.syncOptions = { onSave: true, onFileChange: false };
       needsSave = true;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MIGRATION 4: customBookMappings V1 → V2
+    // ═══════════════════════════════════════════════════════════════
+    if (
+      this.settings.customBookMappings &&
+      Object.keys(this.settings.customBookMappings).length > 0 &&
+      !this.settings.customBookMappingsV2
+    ) {
+      console.log('Migrating custom book mappings from V1 to V2');
+
+      const v2: CustomBookMappingsV2 = {};
+
+      for (const [alias, bookId] of Object.entries(this.settings.customBookMappings)) {
+        // Validate bookId exists (optional validation)
+        // For now, we trust the data and just migrate
+        if (!v2[bookId]) {
+          v2[bookId] = { canonicalId: bookId };
+        }
+
+        if (!v2[bookId].aliasesAdditions) {
+          v2[bookId].aliasesAdditions = [];
+        }
+
+        v2[bookId].aliasesAdditions!.push(alias);
+      }
+
+      this.settings.customBookMappingsV2 = v2;
+      needsSave = true;
+      console.log('Migration: customBookMappings V1 → V2 completed');
+
+      // Show migration notice to user
+      this.app.workspace.onLayoutReady(() => {
+        new Notice(this.i18n.t('noticeMigration', { count: Object.keys(v2).length }));
+      });
     }
 
     if (needsSave) {

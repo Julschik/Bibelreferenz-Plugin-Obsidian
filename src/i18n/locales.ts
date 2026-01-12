@@ -111,6 +111,21 @@ export interface LocaleStrings {
   settingsParallelTipDesc: string;
   settingsInfo: string;
   settingsInfoDesc: string;
+
+  // === Settings - Book Mappings (V2) ===
+  settingsBookMappingsVisual: string;
+  settingsBookMappingsVisualDesc: string;
+  settingsBookMappingsJson: string;
+  settingsBookMappingsJsonDesc: string;
+  settingsOldTestament: string;
+  settingsNewTestament: string;
+  settingsAliasesLabel: string;
+  settingsStandalonePatternsLabel: string;
+  settingsPillInputPlaceholder: string;
+  settingsSearchBooksPlaceholder: string;
+  settingsBookMappingsWarning: string;
+  settingsDisplayIdExplanation: string;
+  settingsCannotDeleteCanonicalId: string;
 }
 
 export const LOCALES: Record<Locale, LocaleStrings> = {
@@ -123,16 +138,16 @@ export const LOCALES: Record<Locale, LocaleStrings> = {
     // Sidebar
     sidebarTitle: 'Bibelreferenzen',
     sidebarTabDirect: 'Verweise',
-    sidebarTabParallel: 'Parallelen',
-    sidebarTabGlobal: 'Alle',
+    sidebarTabParallel: 'Parallelstellen',
+    sidebarTabGlobal: 'Suchen',
     sidebarNoReferences: 'Keine Bibelreferenzen gefunden',
     sidebarNoOtherNotes: 'Keine anderen Notizen mit diesem Vers',
     sidebarEmpty: 'Öffne eine Notiz mit Bibelreferenzen...',
     sidebarReferenceCount: '{count} Referenz(en)',
-    sidebarParallelCount: 'in {count} Notiz(en) gemeinsam',
-    sidebarSelectBook: '-- Buch wählen --',
-    sidebarSelectChapter: '-- Kapitel --',
-    sidebarSelectVerse: '-- Vers --',
+    sidebarParallelCount: '{count} Notiz(en)',
+    sidebarSelectBook: 'Buch',
+    sidebarSelectChapter: 'Kapitel',
+    sidebarSelectVerse: 'Vers',
     sidebarNotesWithVerse: 'Notizen mit {verse}:',
 
     // Sync Button
@@ -218,6 +233,21 @@ export const LOCALES: Record<Locale, LocaleStrings> = {
     settingsParallelTipDesc: 'Dieses Plugin geht davon aus, dass alle in einer Notiz erwähnten Verse als Parallelstellen zu verstehen sind (Prinzip: Atomic Notes -> Immer nur ein Gedanke/Thema pro Notiz). Dadurch kannst du auch eigene Parallelstellen-Listen erstellen! Erstelle z.B. eine thematische Notiz ("Gottes Liebe", "Christus im AT", "Gottesknechtslieder" etc.) und liste alle verwandten Verse auf. Diese werden automatisch als Parallelen erkannt.',
     settingsInfo: 'Info',
     settingsInfoDesc: 'Bible Reference Mapper bietet bewusst keine fertigen Listen oder Textimports an. Alle Referenzen sollen aus deinem persönlichen Bibelstudium entstehen. Obsidian bietet die Referenz und Struktur. Aufschlagen musst du deine Bibel dann selbst. ',
+
+    // Settings - Book Mappings
+    settingsBookMappingsVisual: 'Buchmappings',
+    settingsBookMappingsVisualDesc: 'Hier hast du die Möglichkeit zu definieren, wie die Bücher der Bibel in deinen Notizen erkannt werden sollen. Du kannst Aliase (Kurzformen) und Langformen (Volltitel) für jedes Buch festlegen. So kannst du sicherstellen, dass Bibelreferenzen in verschiedenen Schreibweisen korrekt erkannt werden.',
+    settingsBookMappingsJson: 'JSON-Mappings (Erweitert)',
+    settingsBookMappingsJsonDesc: 'Direkte Bearbeitung der Mappings als JSON',
+    settingsOldTestament: 'Altes Testament',
+    settingsNewTestament: 'Neues Testament',
+    settingsAliasesLabel: 'Kurzform (Abkürzungen)',
+    settingsStandalonePatternsLabel: 'Langform (Volltitel)',
+    settingsPillInputPlaceholder: 'Eingabe zum Hinzufügen...',
+    settingsSearchBooksPlaceholder: 'Bücher durchsuchen...',
+    settingsBookMappingsWarning: 'Achtung: Das Löschen aller Aliase kann dazu führen, dass Bibelstellen nicht mehr erkannt werden.',
+    settingsDisplayIdExplanation: 'Der aktuell gepinnte Alias ist die für Sie überall im Interface sichtbare Anzeige des Buches. Sie können eine andere Schreibweise als Ihren bevorzugten Alias pinnen, indem Sie auf das Pin-Symbol klicken.',
+    settingsCannotDeleteCanonicalId: 'Die kanonische ID kann nicht gelöscht werden.',
   },
 
   en: {
@@ -230,15 +260,15 @@ export const LOCALES: Record<Locale, LocaleStrings> = {
     sidebarTitle: 'Bible References',
     sidebarTabDirect: 'References',
     sidebarTabParallel: 'Parallels',
-    sidebarTabGlobal: 'All',
+    sidebarTabGlobal: 'Search',
     sidebarNoReferences: 'No Bible references found',
     sidebarNoOtherNotes: 'No other notes with this verse',
     sidebarEmpty: 'Open a note with Bible references...',
     sidebarReferenceCount: '{count} reference(s)',
-    sidebarParallelCount: 'in {count} note(s) together',
-    sidebarSelectBook: '-- Select book --',
-    sidebarSelectChapter: '-- Chapter --',
-    sidebarSelectVerse: '-- Verse --',
+    sidebarParallelCount: '{count} note(s)',
+    sidebarSelectBook: 'Select book',
+    sidebarSelectChapter: 'Chapter',
+    sidebarSelectVerse: 'Verse',
     sidebarNotesWithVerse: 'Notes with {verse}:',
 
     // Sync Button
@@ -324,5 +354,20 @@ export const LOCALES: Record<Locale, LocaleStrings> = {
     settingsParallelTipDesc: 'This plugin assumes that all verses mentioned in a note should be understood as parallel passages (principle: Atomic Notes → always just one idea/theme per note). This also allows you to create your own parallel passage lists! For example, create a thematic note ("God\'s Love", "Christ in the Old Testament", "Servant Songs" etc.) and list all related verses. These will automatically be recognized as parallels.',
     settingsInfo: 'Info',
     settingsInfoDesc: 'Bible Reference Mapper deliberately offers no pre-made lists or text imports. All references should come from your personal Bible study. Obsidian provides the reference and structure. You still have to open your Bible yourself.',
+
+    // Settings - Book Mappings
+    settingsBookMappingsVisual: 'Book Mappings',
+    settingsBookMappingsVisualDesc: 'Here you can define how Bible books are recognized in your notes. You can set aliases (short forms) and long forms (full titles) for each book. This ensures that Bible references are correctly identified regardless of the format used.',
+    settingsBookMappingsJson: 'JSON Mappings (Advanced)',
+    settingsBookMappingsJsonDesc: 'Direct editing of mappings as JSON',
+    settingsOldTestament: 'Old Testament',
+    settingsNewTestament: 'New Testament',
+    settingsAliasesLabel: 'Short Form (Abbreviations)',
+    settingsStandalonePatternsLabel: 'Long Form (Full Titles)',
+    settingsPillInputPlaceholder: 'Press Enter to add...',
+    settingsSearchBooksPlaceholder: 'Search books...',
+    settingsBookMappingsWarning: 'Warning: Deleting all aliases may prevent Bible references from being detected.',
+    settingsDisplayIdExplanation: 'The currently pinned alias is the display format you will see everywhere in the interface. You can pin a different format as your preferred alias by clicking the pin icon.',
+    settingsCannotDeleteCanonicalId: 'The canonical ID cannot be deleted.',
   }
 };

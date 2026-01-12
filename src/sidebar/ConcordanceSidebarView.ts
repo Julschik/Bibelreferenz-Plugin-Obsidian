@@ -36,6 +36,8 @@ export class ConcordanceSidebarView extends ItemView {
 
   // UI elements
   private tabContentEl: HTMLElement;
+  private expandAllBtn: HTMLElement | null = null;
+  private allExpandedState: boolean = false;
 
   constructor(leaf: WorkspaceLeaf, plugin: BibleRefPlugin) {
     super(leaf);
@@ -83,8 +85,14 @@ export class ConcordanceSidebarView extends ItemView {
       cls: 'bible-ref-title'
     });
 
+    // Create button container for expand/collapse + sync buttons
+    const buttonContainerEl = headerEl.createDiv('bible-ref-header-buttons');
+
+    // Create expand/collapse all button
+    this.renderExpandCollapseButton(buttonContainerEl);
+
     // Create sync button
-    this.syncButton = new SyncButton(headerEl, this.plugin.i18n, async () => {
+    this.syncButton = new SyncButton(buttonContainerEl, this.plugin.i18n, async () => {
       await this.syncCurrentFile();
     });
 
@@ -93,6 +101,15 @@ export class ConcordanceSidebarView extends ItemView {
 
     // Create tab content area
     this.tabContentEl = contentEl.createDiv('bible-ref-tab-content');
+
+    // Listen for manual expand/collapse in tabs to update button icon
+    this.tabContentEl.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.bible-ref-expandable-header')) {
+        // Wait for DOM update, then update icon
+        setTimeout(() => this.updateExpandCollapseIcon(), 50);
+      }
+    });
 
     // Register events
     this.registerEvent(
@@ -125,6 +142,87 @@ export class ConcordanceSidebarView extends ItemView {
     if (this.syncButton) {
       this.syncButton.destroy();
     }
+  }
+
+  /**
+   * Render expand/collapse all button
+   */
+  private renderExpandCollapseButton(containerEl: HTMLElement): void {
+    this.expandAllBtn = containerEl.createEl('button', {
+      cls: 'clickable-icon bible-ref-expand-all-button',
+      attr: {
+        'title': 'Expand/Collapse all items'
+      }
+    });
+
+    const iconSpan = this.expandAllBtn.createSpan({ cls: 'bible-ref-expand-all-icon' });
+    // Start with "expand" icon (arrows apart) since all items start collapsed
+    setIcon(iconSpan, 'chevrons-up-down');
+
+    this.expandAllBtn.addEventListener('click', () => {
+      this.toggleExpandAllInCurrentTab();
+    });
+  }
+
+  /**
+   * Update expand/collapse button icon based on current state
+   * Icon shows "expand" (chevrons apart) if all collapsed, "collapse" (chevrons together) if any expanded
+   */
+  private updateExpandCollapseIcon(): void {
+    if (!this.expandAllBtn || !this.tabContentEl) return;
+
+    const expandables = this.tabContentEl.querySelectorAll('.bible-ref-expandable');
+    if (expandables.length === 0) return;
+
+    // Check if any item is expanded
+    const anyExpanded = Array.from(expandables).some(el =>
+      el.classList.contains('expanded')
+    );
+
+    // Update icon based on state
+    const iconSpan = this.expandAllBtn.querySelector('.bible-ref-expand-all-icon');
+    if (iconSpan) {
+      // If any expanded, show "collapse" icon (arrows together)
+      // If none expanded, show "expand" icon (arrows apart)
+      setIcon(iconSpan as HTMLElement, anyExpanded ? 'chevrons-down-up' : 'chevrons-up-down');
+    }
+  }
+
+  /**
+   * Toggle expand/collapse all for current tab
+   */
+  private toggleExpandAllInCurrentTab(): void {
+    if (!this.tabContentEl) return;
+
+    const expandables = this.tabContentEl.querySelectorAll('.bible-ref-expandable');
+    if (expandables.length === 0) return;
+
+    // Check if all are expanded
+    const allExpanded = Array.from(expandables).every(el =>
+      el.classList.contains('expanded')
+    );
+
+    // Toggle all
+    const newState = !allExpanded;
+    for (const expandable of expandables) {
+      const header = expandable.querySelector('.bible-ref-expandable-header') as HTMLElement;
+      const content = expandable.querySelector('.bible-ref-parallel-files') as HTMLElement;
+      const icon = expandable.querySelector('.bible-ref-expand-icon') as HTMLElement;
+
+      if (header && content && icon) {
+        content.style.display = newState ? 'block' : 'none';
+        setIcon(icon, newState ? 'chevron-down' : 'chevron-right');
+
+        if (newState) {
+          expandable.addClass('expanded');
+        } else {
+          expandable.removeClass('expanded');
+        }
+      }
+    }
+
+    this.allExpandedState = newState;
+    this.updateExpandCollapseIcon();
   }
 
   /**
@@ -202,6 +300,9 @@ export class ConcordanceSidebarView extends ItemView {
         this.globalTab.render(this.tabContentEl);
         break;
     }
+
+    // Update expand/collapse button icon based on new tab content
+    this.updateExpandCollapseIcon();
   }
 
   /**
