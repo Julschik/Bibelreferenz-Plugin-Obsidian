@@ -171,8 +171,9 @@ export default class BibleRefPlugin extends Plugin {
   /**
    * Sync All Files
    * Synchronisiert alle Markdown-Dateien im Vault.
+   * Public for access from sidebar QuickSettingsButton.
    */
-  private async syncAllFiles(): Promise<void> {
+  async syncAllFiles(): Promise<void> {
     const startTime = Date.now();
     new Notice(this.i18n.t('syncButtonSyncing'));
 

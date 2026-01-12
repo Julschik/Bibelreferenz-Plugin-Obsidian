@@ -103,7 +103,10 @@ export interface BibleRefSettings {
   // Frontmatter settings
   frontmatterKey: string;       // Default: "_bible_refs"
   tagPrefix: string;            // Default: "bible/"
-  writeToTagsField: boolean;    // Default: false - Also write to 'tags' field for graph view
+
+  // Graph View settings
+  writeToTagsField: boolean;    // Default: true - Also write to 'tags' field for graph view
+  graphTagGranularity: 'book' | 'chapter' | 'verse';  // Default: 'verse' - Granularity for tags field
 
   // Parsing options
   parseCodeBlocks: boolean;     // Default: false

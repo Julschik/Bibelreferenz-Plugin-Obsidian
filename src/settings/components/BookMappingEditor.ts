@@ -32,14 +32,12 @@ export class BookMappingEditor {
   private render(): void {
     const { bookMapping, customization, i18n } = this.options;
 
-    // Add description text above aliases
-    const descriptionEl = this.containerEl.createDiv('bible-ref-field-description');
-    descriptionEl.textContent = i18n.t('settingsDisplayIdExplanation');
-
     // Calculate current state
-    // ALWAYS include canonical ID as first element in aliases
+    // Include canonical ID as first element only if not already in aliases
     const canonicalId = bookMapping.canonicalId;
-    const defaultAliases = [canonicalId, ...bookMapping.aliases];
+    const defaultAliases = bookMapping.aliases.includes(canonicalId)
+      ? bookMapping.aliases
+      : [canonicalId, ...bookMapping.aliases];
     const deletedAliases = customization?.aliasesDeletions || [];
     const addedAliases = customization?.aliasesAdditions || [];
     const visibleDefaultAliases = defaultAliases.filter(a => !deletedAliases.includes(a));
@@ -206,9 +204,11 @@ export class BookMappingEditor {
     const { bookMapping } = this.options;
 
     // Recalculate visible values
-    // Include canonical ID as first element
+    // Include canonical ID as first element only if not already in aliases
     const canonicalId = bookMapping.canonicalId;
-    const defaultAliases = [canonicalId, ...bookMapping.aliases];
+    const defaultAliases = bookMapping.aliases.includes(canonicalId)
+      ? bookMapping.aliases
+      : [canonicalId, ...bookMapping.aliases];
     const deletedAliases = customization?.aliasesDeletions || [];
     const addedAliases = customization?.aliasesAdditions || [];
     const visibleDefaultAliases = defaultAliases.filter(
