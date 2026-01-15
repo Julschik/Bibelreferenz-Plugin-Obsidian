@@ -290,4 +290,110 @@ describe('FrontmatterSync', () => {
       expect(changed).toBe(false);
     });
   });
+
+  describe('Graph View Tags Cleanup', () => {
+    it('should remove Bible tags from tags field when writeToTagsField is disabled', async () => {
+      // Start with writeToTagsField enabled and Bible tags in both fields
+      settings.writeToTagsField = true;
+      sync = new FrontmatterSync(mockApp, settings);
+
+      mockCache.frontmatter = {
+        'bible-refs': ['bible/Joh/3/16'],
+        'tags': ['bible/Joh/3/16', 'other-tag'],
+        '_bible_refs_granularity': 'verse'
+      };
+
+      // Now disable writeToTagsField
+      settings.writeToTagsField = false;
+      sync.updateSettings(settings);
+
+      // Sync with same tags (should still trigger write due to cleanup needed)
+      const changed = await sync.sync(mockFile, ['bible/Joh/3/16']);
+
+      expect(changed).toBe(true);
+      // Bible tags should be removed from tags field
+      expect(mockCache.frontmatter.tags).toEqual(['other-tag']);
+      // Granularity field should be removed
+      expect(mockCache.frontmatter['_bible_refs_granularity']).toBeUndefined();
+      // Custom field should remain
+      expect(mockCache.frontmatter['bible-refs']).toEqual(['bible/Joh/3/16']);
+    });
+
+    it('should delete tags field entirely if only Bible tags remain', async () => {
+      settings.writeToTagsField = false;
+      sync = new FrontmatterSync(mockApp, settings);
+
+      mockCache.frontmatter = {
+        'bible-refs': ['bible/Joh/3/16'],
+        'tags': ['bible/Joh/3/16', 'bible/Gen/1/1']
+      };
+
+      const changed = await sync.sync(mockFile, ['bible/Joh/3/16']);
+
+      expect(changed).toBe(true);
+      expect(mockCache.frontmatter.tags).toBeUndefined();
+    });
+
+    it('should preserve non-Bible tags when cleaning up', async () => {
+      settings.writeToTagsField = false;
+      sync = new FrontmatterSync(mockApp, settings);
+
+      mockCache.frontmatter = {
+        'bible-refs': ['bible/Joh/3/16'],
+        'tags': ['bible/Joh/3/16', 'project/work', 'status/review']
+      };
+
+      const changed = await sync.sync(mockFile, ['bible/Joh/3/16']);
+
+      expect(changed).toBe(true);
+      expect(mockCache.frontmatter.tags).toEqual(['project/work', 'status/review']);
+    });
+
+    it('should not trigger cleanup when no Bible tags exist in tags field', async () => {
+      settings.writeToTagsField = false;
+      sync = new FrontmatterSync(mockApp, settings);
+
+      mockCache.frontmatter = {
+        'bible-refs': ['bible/Joh/3/16'],
+        'tags': ['project/work', 'status/review']
+      };
+
+      // Same tags, no cleanup needed
+      const changed = await sync.sync(mockFile, ['bible/Joh/3/16']);
+
+      expect(changed).toBe(false);
+    });
+
+    it('should handle tags field as single string when cleaning up', async () => {
+      settings.writeToTagsField = false;
+      sync = new FrontmatterSync(mockApp, settings);
+
+      mockCache.frontmatter = {
+        'bible-refs': ['bible/Joh/3/16'],
+        'tags': 'bible/Joh/3/16'
+      };
+
+      const changed = await sync.sync(mockFile, ['bible/Joh/3/16']);
+
+      expect(changed).toBe(true);
+      expect(mockCache.frontmatter.tags).toBeUndefined();
+    });
+
+    it('should respect custom tag prefix when cleaning up', async () => {
+      settings.writeToTagsField = false;
+      settings.tagPrefix = 'scripture/';
+      sync = new FrontmatterSync(mockApp, settings);
+
+      mockCache.frontmatter = {
+        'bible-refs': ['scripture/Joh/3/16'],
+        'tags': ['scripture/Joh/3/16', 'bible/other', 'project/work']
+      };
+
+      const changed = await sync.sync(mockFile, ['scripture/Joh/3/16']);
+
+      expect(changed).toBe(true);
+      // Only scripture/ prefix tags should be removed, not bible/
+      expect(mockCache.frontmatter.tags).toEqual(['bible/other', 'project/work']);
+    });
+  });
 });

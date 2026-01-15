@@ -1,371 +1,344 @@
 import type { BookMapping } from '../types';
 
-/**
- * English book name mappings for all 66 Bible books
- * Includes common English abbreviations and variations
- *
- * Design notes:
- * - Aliases are sorted by length (longest first) to prevent premature matching
- * - standalonePatterns: Book names that work without chapter/verse
- * - Includes variations with/without dots and spaces
- */
 export const BOOK_MAPPINGS_EN: BookMapping[] = [
   // ═══════════════════════════════════════════════════════════════
   // OLD TESTAMENT
   // ═══════════════════════════════════════════════════════════════
 
-  // Pentateuch (Torah)
   {
     canonicalId: 'Gen',
-    aliases: ['Genesis', 'Gen', 'Ge', 'Gn'],
-    standalonePatterns: ['Genesis', 'Book of Genesis']
+    aliases: ['Genesis', 'Gen.', 'Gen', 'Ge.', 'Ge', 'Gn'],
+    standalonePatterns: ['The Book of Genesis', 'First Book of Moses']
   },
   {
     canonicalId: 'Exo',
-    aliases: ['Exodus', 'Exo', 'Exod', 'Ex'],
-    standalonePatterns: ['Exodus', 'Book of Exodus']
+    aliases: ['Exodus', 'Exod.', 'Exod', 'Ex.', 'Ex'],
+    standalonePatterns: ['The Book of Exodus', 'Second Book of Moses']
   },
   {
     canonicalId: 'Lev',
-    aliases: ['Leviticus', 'Lev', 'Le', 'Lv'],
-    standalonePatterns: ['Leviticus', 'Book of Leviticus']
+    aliases: ['Leviticus', 'Lev.', 'Lev', 'Le.', 'Le', 'Lv'],
+    standalonePatterns: ['The Book of Leviticus', 'Third Book of Moses']
   },
   {
     canonicalId: 'Num',
-    aliases: ['Numbers', 'Num', 'Nu', 'Nm', 'Nb'],
-    standalonePatterns: ['Numbers', 'Book of Numbers']
+    aliases: ['Numbers', 'Num.', 'Num', 'Nu.', 'Nu', 'Nm'],
+    standalonePatterns: ['The Book of Numbers', 'Fourth Book of Moses']
   },
   {
     canonicalId: 'Deu',
-    aliases: ['Deuteronomy', 'Deut', 'Deu', 'Dt'],
-    standalonePatterns: ['Deuteronomy', 'Book of Deuteronomy']
+    aliases: ['Deuteronomy', 'Deut.', 'Deut', 'Deu.', 'Deu', 'Dt.', 'Dt'],
+    standalonePatterns: ['The Book of Deuteronomy', 'Fifth Book of Moses']
   },
-
-  // Historical Books
   {
     canonicalId: 'Jos',
-    aliases: ['Joshua', 'Josh', 'Jos', 'Jsh'],
-    standalonePatterns: ['Joshua', 'Book of Joshua']
+    aliases: ['Joshua', 'Josh.', 'Josh', 'Jos.', 'Jos'],
+    standalonePatterns: ['The Book of Joshua']
   },
   {
     canonicalId: 'Jdg',
-    aliases: ['Judges', 'Judg', 'Jdg', 'Jg', 'Jdgs'],
-    standalonePatterns: ['Judges', 'Book of Judges']
+    aliases: ['Judges', 'Judg.', 'Judg', 'Jdgs.', 'Jdgs', 'Jg.', 'Jg'],
+    standalonePatterns: ['The Book of Judges']
   },
   {
     canonicalId: 'Rut',
-    aliases: ['Ruth', 'Rut', 'Rth', 'Ru'],
-    standalonePatterns: ['Ruth', 'Book of Ruth']
+    aliases: ['Ruth', 'Rut.', 'Rut', 'Ru.', 'Ru'],
+    standalonePatterns: ['The Book of Ruth']
   },
   {
-    canonicalId: '1Sa',
-    aliases: ['1 Samuel', '1Samuel', '1Sam', '1 Sam', '1Sa', '1 Sa', 'I Samuel', 'First Samuel'],
-    standalonePatterns: ['1 Samuel', 'First Samuel', 'First Book of Samuel']
+    canonicalId: '1Sam',
+    aliases: ['1 Samuel', '1. Samuel', '1Samuel', '1 Sam.', '1 Sam', '1Sam.', 'I Sam.', 'I Sam', 'ISam', '1Sa.', '1Sa', '1S.'],
+    standalonePatterns: ['The First Book of Samuel']
   },
   {
-    canonicalId: '2Sa',
-    aliases: ['2 Samuel', '2Samuel', '2Sam', '2 Sam', '2Sa', '2 Sa', 'II Samuel', 'Second Samuel'],
-    standalonePatterns: ['2 Samuel', 'Second Samuel', 'Second Book of Samuel']
+    canonicalId: '2Sam',
+    aliases: ['2 Samuel', '2. Samuel', '2Samuel', '2 Sam.', '2 Sam', '2Sam.', 'II Sam.', 'II Sam', 'IISam', '2Sa.', '2Sa', '2S.'],
+    standalonePatterns: ['The Second Book of Samuel']
   },
   {
-    canonicalId: '1Ki',
-    aliases: ['1 Kings', '1Kings', '1Kgs', '1 Kgs', '1Ki', '1 Ki', 'I Kings', 'First Kings'],
-    standalonePatterns: ['1 Kings', 'First Kings', 'First Book of Kings']
+    canonicalId: '1Kgs',
+    aliases: ['1 Kings', '1. Kings', '1Kings', '1 Kgs.', '1 Kgs', '1Kgs.', 'I Kings', 'I Kgs.', 'I Kgs', '1Ki.', '1Ki'],
+    standalonePatterns: ['The First Book of Kings']
   },
   {
-    canonicalId: '2Ki',
-    aliases: ['2 Kings', '2Kings', '2Kgs', '2 Kgs', '2Ki', '2 Ki', 'II Kings', 'Second Kings'],
-    standalonePatterns: ['2 Kings', 'Second Kings', 'Second Book of Kings']
+    canonicalId: '2Kgs',
+    aliases: ['2 Kings', '2. Kings', '2Kings', '2 Kgs.', '2 Kgs', '2Kgs.', 'II Kings', 'II Kgs.', 'II Kgs', '2Ki.', '2Ki'],
+    standalonePatterns: ['The Second Book of Kings']
   },
   {
-    canonicalId: '1Ch',
-    aliases: ['1 Chronicles', '1Chronicles', '1Chron', '1 Chron', '1Chr', '1 Chr', '1Ch', 'I Chronicles', 'First Chronicles'],
-    standalonePatterns: ['1 Chronicles', 'First Chronicles', 'First Book of Chronicles']
+    canonicalId: '1Chr',
+    aliases: ['1 Chronicles', '1. Chronicles', '1Chronicles', '1 Chron.', '1 Chron', '1Chr.', '1Chr', 'I Chron', 'I Chr', '1Ch'],
+    standalonePatterns: ['The First Book of Chronicles']
   },
   {
-    canonicalId: '2Ch',
-    aliases: ['2 Chronicles', '2Chronicles', '2Chron', '2 Chron', '2Chr', '2 Chr', '2Ch', 'II Chronicles', 'Second Chronicles'],
-    standalonePatterns: ['2 Chronicles', 'Second Chronicles', 'Second Book of Chronicles']
+    canonicalId: '2Chr',
+    aliases: ['2 Chronicles', '2. Chronicles', '2Chronicles', '2 Chron.', '2 Chron', '2Chr.', '2Chr', 'II Chron', 'II Chr', '2Ch'],
+    standalonePatterns: ['The Second Book of Chronicles']
   },
   {
     canonicalId: 'Ezr',
-    aliases: ['Ezra', 'Ezr', 'Ez'],
-    standalonePatterns: ['Ezra', 'Book of Ezra']
+    aliases: ['Ezra', 'Ezr.', 'Ezr', 'Ez'],
+    standalonePatterns: ['The Book of Ezra']
   },
   {
     canonicalId: 'Neh',
-    aliases: ['Nehemiah', 'Neh', 'Ne'],
-    standalonePatterns: ['Nehemiah', 'Book of Nehemiah']
+    aliases: ['Nehemiah', 'Neh.', 'Neh', 'Ne'],
+    standalonePatterns: ['The Book of Nehemiah']
   },
   {
     canonicalId: 'Est',
-    aliases: ['Esther', 'Esth', 'Est', 'Es'],
-    standalonePatterns: ['Esther', 'Book of Esther']
+    aliases: ['Esther', 'Esth.', 'Esth', 'Est.', 'Est', 'Es'],
+    standalonePatterns: ['The Book of Esther']
   },
-
-  // Wisdom Books
   {
     canonicalId: 'Job',
-    aliases: ['Job', 'Jb'],
-    standalonePatterns: ['Job', 'Book of Job']
+    aliases: ['Job', 'Jb.', 'Jb'],
+    standalonePatterns: ['The Book of Job']
   },
   {
     canonicalId: 'Psa',
-    aliases: ['Psalms', 'Psalm', 'Psa', 'Ps', 'Pss', 'Psm'],
-    standalonePatterns: ['Psalms', 'Book of Psalms', 'Psalter']
+    aliases: ['Psalms', 'Psalm', 'Psa.', 'Pss.', 'Pss', 'Ps.', 'Ps'],
+    standalonePatterns: ['The Book of Psalms', 'The Psalter']
   },
   {
     canonicalId: 'Pro',
-    aliases: ['Proverbs', 'Prov', 'Pro', 'Prv', 'Pr'],
-    standalonePatterns: ['Proverbs', 'Book of Proverbs']
+    aliases: ['Proverbs', 'Prov.', 'Prov', 'Pr.', 'Pr'],
+    standalonePatterns: ['The Proverbs of Solomon', 'The Book of Proverbs']
   },
   {
     canonicalId: 'Ecc',
-    aliases: ['Ecclesiastes', 'Eccles', 'Eccl', 'Ecc', 'Ec', 'Qoh', 'Qoheleth'],
-    standalonePatterns: ['Ecclesiastes', 'Book of Ecclesiastes']
+    aliases: ['Ecclesiastes', 'Eccl.', 'Eccl', 'Ecc.', 'Ecc', 'Qoheleth', 'Qoh'],
+    standalonePatterns: ['Ecclesiastes', 'The Preacher', 'Qoheleth']
   },
   {
-    canonicalId: 'Son',
-    aliases: ['Song of Solomon', 'Song of Songs', 'Songs', 'Song', 'SOS', 'SoS', 'SS', 'Can', 'Canticles'],
-    standalonePatterns: ['Song of Solomon', 'Song of Songs', 'Canticles']
+    canonicalId: 'Sng',
+    aliases: ['Song of Solomon', 'Song of Songs', 'Canticles', 'Song.', 'Song', 'Cant.', 'Cant', 'So.', 'So'],
+    standalonePatterns: ['The Song of Solomon', 'Song of Songs', 'Canticle of Canticles']
   },
-
-  // Major Prophets
   {
     canonicalId: 'Isa',
-    aliases: ['Isaiah', 'Isa', 'Is'],
-    standalonePatterns: ['Isaiah', 'Book of Isaiah']
+    aliases: ['Isaiah', 'Isa.', 'Isa', 'Is.', 'Is'],
+    standalonePatterns: ['The Book of Isaiah']
   },
   {
     canonicalId: 'Jer',
-    aliases: ['Jeremiah', 'Jer', 'Je', 'Jr'],
-    standalonePatterns: ['Jeremiah', 'Book of Jeremiah']
+    aliases: ['Jeremiah', 'Jer.', 'Jer', 'Je.', 'Je'],
+    standalonePatterns: ['The Book of Jeremiah']
   },
   {
     canonicalId: 'Lam',
-    aliases: ['Lamentations', 'Lam', 'La'],
-    standalonePatterns: ['Lamentations', 'Book of Lamentations']
+    aliases: ['Lamentations', 'Lam.', 'Lam', 'La.', 'La'],
+    standalonePatterns: ['The Lamentations of Jeremiah']
   },
   {
     canonicalId: 'Eze',
-    aliases: ['Ezekiel', 'Ezek', 'Eze', 'Ezk'],
-    standalonePatterns: ['Ezekiel', 'Book of Ezekiel']
+    aliases: ['Ezekiel', 'Ezek.', 'Ezek', 'Eze.', 'Eze', 'Ek.'],
+    standalonePatterns: ['The Book of Ezekiel']
   },
   {
     canonicalId: 'Dan',
-    aliases: ['Daniel', 'Dan', 'Da', 'Dn'],
-    standalonePatterns: ['Daniel', 'Book of Daniel']
+    aliases: ['Daniel', 'Dan.', 'Dan', 'Da.', 'Da'],
+    standalonePatterns: ['The Book of Daniel']
   },
-
-  // Minor Prophets
   {
     canonicalId: 'Hos',
-    aliases: ['Hosea', 'Hos', 'Ho'],
-    standalonePatterns: ['Hosea', 'Book of Hosea']
+    aliases: ['Hosea', 'Hos.', 'Hos', 'Ho.'],
+    standalonePatterns: ['The Book of Hosea']
   },
   {
-    canonicalId: 'Joe',
-    aliases: ['Joel', 'Joe', 'Jl'],
-    standalonePatterns: ['Joel', 'Book of Joel']
+    canonicalId: 'Jol',
+    aliases: ['Joel', 'Joe.', 'Joe', 'Jl.', 'Jl'],
+    standalonePatterns: ['The Book of Joel']
   },
   {
     canonicalId: 'Amo',
-    aliases: ['Amos', 'Amo', 'Am'],
-    standalonePatterns: ['Amos', 'Book of Amos']
+    aliases: ['Amos', 'Amos.', 'Am.', 'Am'],
+    standalonePatterns: ['The Book of Amos']
   },
   {
     canonicalId: 'Oba',
-    aliases: ['Obadiah', 'Obad', 'Oba', 'Ob'],
-    standalonePatterns: ['Obadiah', 'Book of Obadiah']
+    aliases: ['Obadiah', 'Obad.', 'Obad', 'Ob.', 'Ob'],
+    standalonePatterns: ['The Book of Obadiah']
   },
   {
     canonicalId: 'Jon',
-    aliases: ['Jonah', 'Jon', 'Jnh'],
-    standalonePatterns: ['Jonah', 'Book of Jonah']
+    aliases: ['Jonah', 'Jonah.', 'Jon.', 'Jon'],
+    standalonePatterns: ['The Book of Jonah']
   },
   {
     canonicalId: 'Mic',
-    aliases: ['Micah', 'Mic', 'Mi'],
-    standalonePatterns: ['Micah', 'Book of Micah']
+    aliases: ['Micah', 'Mic.', 'Mic', 'Mi.'],
+    standalonePatterns: ['The Book of Micah']
   },
   {
     canonicalId: 'Nah',
-    aliases: ['Nahum', 'Nah', 'Na'],
-    standalonePatterns: ['Nahum', 'Book of Nahum']
+    aliases: ['Nahum', 'Nah.', 'Nah', 'Na.'],
+    standalonePatterns: ['The Book of Nahum']
   },
   {
     canonicalId: 'Hab',
-    aliases: ['Habakkuk', 'Hab', 'Hb'],
-    standalonePatterns: ['Habakkuk', 'Book of Habakkuk']
+    aliases: ['Habakkuk', 'Hab.', 'Hab', 'Hb.'],
+    standalonePatterns: ['The Book of Habakkuk']
   },
   {
     canonicalId: 'Zep',
-    aliases: ['Zephaniah', 'Zeph', 'Zep', 'Zp'],
-    standalonePatterns: ['Zephaniah', 'Book of Zephaniah']
+    aliases: ['Zephaniah', 'Zeph.', 'Zeph', 'Zp.', 'Zp'],
+    standalonePatterns: ['The Book of Zephaniah']
   },
   {
     canonicalId: 'Hag',
-    aliases: ['Haggai', 'Hag', 'Hg'],
-    standalonePatterns: ['Haggai', 'Book of Haggai']
+    aliases: ['Haggai', 'Hagg.', 'Hagg', 'Hag.', 'Hag', 'Hg.'],
+    standalonePatterns: ['The Book of Haggai']
   },
   {
     canonicalId: 'Zec',
-    aliases: ['Zechariah', 'Zech', 'Zec', 'Zc'],
-    standalonePatterns: ['Zechariah', 'Book of Zechariah']
+    aliases: ['Zechariah', 'Zech.', 'Zech', 'Zec.', 'Zec'],
+    standalonePatterns: ['The Book of Zechariah']
   },
   {
     canonicalId: 'Mal',
-    aliases: ['Malachi', 'Mal', 'Ml'],
-    standalonePatterns: ['Malachi', 'Book of Malachi']
+    aliases: ['Maleachi', 'Malachi', 'Mal.', 'Mal', 'Ml.'],
+    standalonePatterns: ['The Book of Malachi']
   },
 
   // ═══════════════════════════════════════════════════════════════
   // NEW TESTAMENT
   // ═══════════════════════════════════════════════════════════════
 
-  // Gospels
   {
-    canonicalId: 'Mat',
-    aliases: ['Matthew', 'Matt', 'Mat', 'Mt'],
-    standalonePatterns: ['Matthew', 'Gospel of Matthew', 'Gospel According to Matthew']
+    canonicalId: 'Matt',
+    aliases: ['Matthew', 'Matt.', 'Matt', 'Mat.', 'Mat', 'Mt.', 'Mt'],
+    standalonePatterns: ['Gospel according to Matthew', 'The Gospel of Matthew']
   },
   {
-    canonicalId: 'Mar',
-    aliases: ['Mark', 'Mar', 'Mk', 'Mrk'],
-    standalonePatterns: ['Mark', 'Gospel of Mark', 'Gospel According to Mark']
+    canonicalId: 'Mark',
+    aliases: ['Mark', 'Mark.', 'Mk.', 'Mk', 'Mrk.'],
+    standalonePatterns: ['Gospel according to Mark', 'The Gospel of Mark']
   },
   {
-    canonicalId: 'Luk',
-    aliases: ['Luke', 'Luk', 'Lk', 'Lu'],
-    standalonePatterns: ['Luke', 'Gospel of Luke', 'Gospel According to Luke']
+    canonicalId: 'Luke',
+    aliases: ['Luke', 'Luke.', 'Luk.', 'Luk', 'Lk.', 'Lk'],
+    standalonePatterns: ['Gospel according to Luke', 'The Gospel of Luke']
   },
   {
-    canonicalId: 'Joh',
-    aliases: ['John', 'Joh', 'Jhn', 'Jn'],
-    standalonePatterns: ['Gospel of John', 'Gospel According to John']
+    canonicalId: 'John',
+    aliases: ['Johannes', 'John', 'John.', 'Joh.', 'Joh', 'Jn.', 'Jn'],
+    standalonePatterns: ['Gospel according to John', 'The Gospel of John']
   },
-
-  // History
   {
-    canonicalId: 'Act',
-    aliases: ['Acts', 'Act', 'Ac'],
-    standalonePatterns: ['Acts', 'Acts of the Apostles']
+    canonicalId: 'Acts',
+    aliases: ['Acts', 'Acts.', 'Act.', 'Act', 'Ac.'],
+    standalonePatterns: ['The Acts of the Apostles']
   },
-
-  // Pauline Epistles
   {
     canonicalId: 'Rom',
-    aliases: ['Romans', 'Rom', 'Ro', 'Rm'],
-    standalonePatterns: ['Romans', 'Epistle to the Romans']
+    aliases: ['Romans', 'Rom.', 'Rom', 'Ro.', 'Ro', 'Rm.'],
+    standalonePatterns: ['Epistle to the Romans']
   },
   {
-    canonicalId: '1Co',
-    aliases: ['1 Corinthians', '1Corinthians', '1Cor', '1 Cor', '1Co', '1 Co', 'I Corinthians', 'First Corinthians'],
-    standalonePatterns: ['1 Corinthians', 'First Corinthians', 'First Epistle to the Corinthians']
+    canonicalId: '1Cor',
+    aliases: ['1 Corinthians', '1. Corinthians', '1Corinthians', '1 Cor.', '1 Cor', '1Cor.', '1Cor', 'I Cor.', 'I Cor', 'ICor'],
+    standalonePatterns: ['First Epistle to the Corinthians']
   },
   {
-    canonicalId: '2Co',
-    aliases: ['2 Corinthians', '2Corinthians', '2Cor', '2 Cor', '2Co', '2 Co', 'II Corinthians', 'Second Corinthians'],
-    standalonePatterns: ['2 Corinthians', 'Second Corinthians', 'Second Epistle to the Corinthians']
+    canonicalId: '2Cor',
+    aliases: ['2 Corinthians', '2. Corinthians', '2Corinthians', '2 Cor.', '2 Cor', '2Cor.', '2Cor', 'II Cor.', 'II Cor', 'IICor'],
+    standalonePatterns: ['Second Epistle to the Corinthians']
   },
   {
     canonicalId: 'Gal',
-    aliases: ['Galatians', 'Gal', 'Ga'],
-    standalonePatterns: ['Galatians', 'Epistle to the Galatians']
+    aliases: ['Galatians', 'Gal.', 'Gal', 'Ga.'],
+    standalonePatterns: ['Epistle to the Galatians']
   },
   {
     canonicalId: 'Eph',
-    aliases: ['Ephesians', 'Eph', 'Ephes'],
-    standalonePatterns: ['Ephesians', 'Epistle to the Ephesians']
+    aliases: ['Ephesians', 'Ephes.', 'Ephes', 'Eph.', 'Eph'],
+    standalonePatterns: ['Epistle to the Ephesians']
   },
   {
-    canonicalId: 'Phi',
-    aliases: ['Philippians', 'Philip', 'Phil', 'Phi', 'Php'],
-    standalonePatterns: ['Philippians', 'Epistle to the Philippians']
+    canonicalId: 'Phil',
+    aliases: ['Philipper', 'Philippians', 'Phil.', 'Phil', 'Php.', 'Php'],
+    standalonePatterns: ['Epistle to the Philippians']
   },
   {
     canonicalId: 'Col',
-    aliases: ['Colossians', 'Col', 'Co'],
-    standalonePatterns: ['Colossians', 'Epistle to the Colossians']
+    aliases: ['Kolosser', 'Colossians', 'Col.', 'Col', 'Cl.'],
+    standalonePatterns: ['Epistle to the Colossians']
   },
   {
-    canonicalId: '1Th',
-    aliases: ['1 Thessalonians', '1Thessalonians', '1Thess', '1 Thess', '1Th', '1 Th', 'I Thessalonians', 'First Thessalonians'],
-    standalonePatterns: ['1 Thessalonians', 'First Thessalonians', 'First Epistle to the Thessalonians']
+    canonicalId: '1Thess',
+    aliases: ['1 Thessalonians', '1. Thessalonians', '1Thessalonians', '1 Thess.', '1 Thess', '1Thess.', 'I Thess.', 'I Thess', '1Th.', '1Th'],
+    standalonePatterns: ['First Epistle to the Thessalonians']
   },
   {
-    canonicalId: '2Th',
-    aliases: ['2 Thessalonians', '2Thessalonians', '2Thess', '2 Thess', '2Th', '2 Th', 'II Thessalonians', 'Second Thessalonians'],
-    standalonePatterns: ['2 Thessalonians', 'Second Thessalonians', 'Second Epistle to the Thessalonians']
+    canonicalId: '2Thess',
+    aliases: ['2 Thessalonians', '2. Thessalonians', '2Thessalonians', '2 Thess.', '2 Thess', '2Thess.', 'II Thess.', 'II Thess', '2Th.', '2Th'],
+    standalonePatterns: ['Second Epistle to the Thessalonians']
   },
   {
-    canonicalId: '1Ti',
-    aliases: ['1 Timothy', '1Timothy', '1Tim', '1 Tim', '1Ti', '1 Ti', 'I Timothy', 'First Timothy'],
-    standalonePatterns: ['1 Timothy', 'First Timothy', 'First Epistle to Timothy']
+    canonicalId: '1Tim',
+    aliases: ['1 Timothy', '1. Timothy', '1Timothy', '1 Tim.', '1 Tim', '1Tim.', 'I Tim.', 'I Tim', '1Ti.', '1Ti'],
+    standalonePatterns: ['First Epistle to Timothy']
   },
   {
-    canonicalId: '2Ti',
-    aliases: ['2 Timothy', '2Timothy', '2Tim', '2 Tim', '2Ti', '2 Ti', 'II Timothy', 'Second Timothy'],
-    standalonePatterns: ['2 Timothy', 'Second Timothy', 'Second Epistle to Timothy']
+    canonicalId: '2Tim',
+    aliases: ['2 Timothy', '2. Timothy', '2Timothy', '2 Tim.', '2 Tim', '2Tim.', 'II Tim.', 'II Tim', '2Ti.', '2Ti'],
+    standalonePatterns: ['Second Epistle to Timothy']
   },
   {
     canonicalId: 'Tit',
-    aliases: ['Titus', 'Tit', 'Ti'],
-    standalonePatterns: ['Titus', 'Epistle to Titus']
+    aliases: ['Titus', 'Tit.', 'Tit', 'Ti.'],
+    standalonePatterns: ['Epistle to Titus']
   },
   {
     canonicalId: 'Phm',
-    aliases: ['Philemon', 'Philem', 'Phlm', 'Phm', 'Pm'],
-    standalonePatterns: ['Philemon', 'Epistle to Philemon']
+    aliases: ['Philemon', 'Philem.', 'Philem', 'Phm.', 'Phm', 'Pm.'],
+    standalonePatterns: ['Epistle to Philemon']
   },
-
-  // General Epistles
   {
     canonicalId: 'Heb',
-    aliases: ['Hebrews', 'Heb', 'He'],
-    standalonePatterns: ['Hebrews', 'Epistle to the Hebrews']
+    aliases: ['Hebrews', 'Hebr.', 'Hebr', 'Heb.', 'Heb'],
+    standalonePatterns: ['Epistle to the Hebrews']
   },
   {
-    canonicalId: 'Jam',
-    aliases: ['James', 'Jam', 'Jas', 'Jm'],
-    standalonePatterns: ['James', 'Epistle of James']
+    canonicalId: 'Jas',
+    aliases: ['Jakobus', 'James', 'James.', 'Jas.', 'Jas', 'Ja.'],
+    standalonePatterns: ['The Epistle of James']
   },
   {
-    canonicalId: '1Pe',
-    aliases: ['1 Peter', '1Peter', '1Pet', '1 Pet', '1Pe', '1 Pe', '1Pt', 'I Peter', 'First Peter'],
-    standalonePatterns: ['1 Peter', 'First Peter', 'First Epistle of Peter']
+    canonicalId: '1Pet',
+    aliases: ['1 Peter', '1. Peter', '1Peter', '1 Pet.', '1 Pet', '1Pet.', 'I Pet.', 'I Pet', '1Pe.', '1Pe', '1Pt.'],
+    standalonePatterns: ['First Epistle of Peter']
   },
   {
-    canonicalId: '2Pe',
-    aliases: ['2 Peter', '2Peter', '2Pet', '2 Pet', '2Pe', '2 Pe', '2Pt', 'II Peter', 'Second Peter'],
-    standalonePatterns: ['2 Peter', 'Second Peter', 'Second Epistle of Peter']
+    canonicalId: '2Pet',
+    aliases: ['2 Peter', '2. Peter', '2Peter', '2 Pet.', '2 Pet', '2Pet.', 'II Pet.', 'II Pet', '2Pe.', '2Pe', '2Pt.'],
+    standalonePatterns: ['Second Epistle of Peter']
   },
   {
-    canonicalId: '1Jo',
-    aliases: ['1 John', '1John', '1Joh', '1 Joh', '1Jo', '1 Jo', '1Jn', '1 Jn', 'I John', 'First John'],
-    standalonePatterns: ['1 John', 'First John', 'First Epistle of John']
+    canonicalId: '1John',
+    aliases: ['1 John', '1. John', '1John', '1 Joh.', '1 Joh', '1Joh.', 'I John', 'I Joh', '1Jn.', '1Jn', '1Jo.'],
+    standalonePatterns: ['First Epistle of John']
   },
   {
-    canonicalId: '2Jo',
-    aliases: ['2 John', '2John', '2Joh', '2 Joh', '2Jo', '2 Jo', '2Jn', '2 Jn', 'II John', 'Second John'],
-    standalonePatterns: ['2 John', 'Second John', 'Second Epistle of John']
+    canonicalId: '2John',
+    aliases: ['2 John', '2. John', '2John', '2 Joh.', '2 Joh', '2Joh.', 'II John', 'II Joh', '2Jn.', '2Jn', '2Jo.'],
+    standalonePatterns: ['Second Epistle of John']
   },
   {
-    canonicalId: '3Jo',
-    aliases: ['3 John', '3John', '3Joh', '3 Joh', '3Jo', '3 Jo', '3Jn', '3 Jn', 'III John', 'Third John'],
-    standalonePatterns: ['3 John', 'Third John', 'Third Epistle of John']
+    canonicalId: '3John',
+    aliases: ['3 John', '3. John', '3John', '3 Joh.', '3 Joh', '3Joh.', 'III John', 'III Joh', '3Jn.', '3Jn', '3Jo.'],
+    standalonePatterns: ['Third Epistle of John']
   },
   {
     canonicalId: 'Jud',
-    aliases: ['Jude', 'Jud', 'Jd'],
-    standalonePatterns: ['Jude', 'Epistle of Jude']
+    aliases: ['Judas', 'Jude', 'Jude.', 'Jud.', 'Jud'],
+    standalonePatterns: ['The Epistle of Jude']
   },
-
-  // Revelation
   {
     canonicalId: 'Rev',
-    aliases: ['Revelation', 'Rev', 'Re', 'Rv', 'Apocalypse'],
-    standalonePatterns: ['Revelation', 'Book of Revelation', 'Revelation of John', 'Apocalypse']
+    aliases: ['Offenbarung', 'Revelation', 'Rev.', 'Rev', 'Rv.', 'Apocalypse', 'Apoc.'],
+    standalonePatterns: ['The Revelation to John', 'The Book of Revelation', 'The Apocalypse']
   }
 ];
 

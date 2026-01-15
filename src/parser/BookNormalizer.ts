@@ -1,6 +1,6 @@
-import type { BookMapping, BibleRefSettings, CustomBookMappingsV2 } from '../types';
-import { BOOK_MAPPINGS_DE } from '../data/bookMappings.de';
-import { BOOK_MAPPINGS_EN } from '../data/bookMappings.en';
+import type { BibleRefSettings, CustomBookMappingsV2 } from '../types';
+import type { Locale, BookLocalization } from '../languages/types';
+import { getBooks } from '../languages/registry';
 import { escapeRegex } from '../utils/regexUtils';
 
 /**
@@ -16,18 +16,18 @@ export class BookNormalizer {
   private allAliasesPattern: string;
 
   /**
-   * @param language Language for book mappings
+   * @param language Language for book mappings (de, en, es, fr, it, pt)
    * @param customMappingsV1 Optional V1 custom book mappings (deprecated, kept for backwards compatibility)
    * @param customMappingsV2 Optional V2 custom book mappings with additions and deletions
    */
   constructor(
-    language: 'de' | 'en' | 'custom',
+    language: Locale,
     customMappingsV1?: Record<string, string>,
     customMappingsV2?: CustomBookMappingsV2
   ) {
-    const mappings = this.loadMappings(language);
-    this.aliasMap = this.buildAliasMap(mappings, customMappingsV1, customMappingsV2);
-    this.standalonePatterns = this.buildStandalonePatterns(mappings, customMappingsV2);
+    const books = getBooks(language);
+    this.aliasMap = this.buildAliasMap(books, customMappingsV1, customMappingsV2);
+    this.standalonePatterns = this.buildStandalonePatterns(books, customMappingsV2);
     this.allAliasesPattern = this.buildAllAliasesPattern();
   }
 
@@ -78,34 +78,23 @@ export class BookNormalizer {
   // ═══════════════════════════════════════════════════════════════
 
   /**
-   * Load book mappings based on language
-   */
-  private loadMappings(language: 'de' | 'en' | 'custom'): BookMapping[] {
-    if (language === 'custom') {
-      // Default to German for custom (user provides overrides)
-      return BOOK_MAPPINGS_DE;
-    }
-    return language === 'de' ? BOOK_MAPPINGS_DE : BOOK_MAPPINGS_EN;
-  }
-
-  /**
-   * Build alias map: lowercased alias → canonical ID
+   * Build alias map: lowercased alias → displayId
    * CRITICAL: Longer aliases are preferred for matching
    *
    * Handles both V1 (simple additions) and V2 (additions + deletions) customizations
    */
   private buildAliasMap(
-    mappings: BookMapping[],
+    books: BookLocalization[],
     customMappingsV1?: Record<string, string>,
     customMappingsV2?: CustomBookMappingsV2
   ): Map<string, string> {
     const map = new Map<string, string>();
 
-    // Create working copy of mappings with V2 customizations applied
-    const workingMappings = mappings.map(m => {
-      const customization = customMappingsV2?.[m.canonicalId];
+    // Create working copy of books with V2 customizations applied
+    const workingBooks = books.map(book => {
+      const customization = customMappingsV2?.[book.canonicalId];
 
-      let aliases = [...m.aliases];
+      let aliases = [...book.aliases];
 
       if (customization) {
         // Apply deletions first (remove default aliases)
@@ -123,21 +112,23 @@ export class BookNormalizer {
         }
       }
 
-      return { ...m, aliases };
+      return { ...book, aliases };
     });
 
     // Add built-in mappings (with V2 customizations applied)
-    for (const mapping of workingMappings) {
+    for (const book of workingBooks) {
+      // Add both displayId and canonicalId as aliases (users can type either)
+      const allAliases = [book.displayId, book.canonicalId, ...book.aliases];
+
       // Sort aliases by length (longest first) to prioritize specific matches
-      const sortedAliases = [...mapping.aliases].sort(
-        (a, b) => b.length - a.length
-      );
+      const sortedAliases = allAliases.sort((a, b) => b.length - a.length);
 
       for (const alias of sortedAliases) {
         const key = alias.toLowerCase();
         // Don't override if already exists (first = longest wins)
         if (!map.has(key)) {
-          map.set(key, mapping.canonicalId);
+          // Map to canonicalId (used for BIBLE_STRUCTURE lookup)
+          map.set(key, book.canonicalId);
         }
       }
     }
@@ -159,16 +150,16 @@ export class BookNormalizer {
    * Handles V2 customizations (additions + deletions)
    */
   private buildStandalonePatterns(
-    mappings: BookMapping[],
+    books: BookLocalization[],
     customMappingsV2?: CustomBookMappingsV2
   ): { pattern: RegExp; bookId: string }[] {
     const patterns: { pattern: RegExp; bookId: string }[] = [];
 
-    // Create working copy of mappings with V2 customizations applied
-    const workingMappings = mappings.map(m => {
-      const customization = customMappingsV2?.[m.canonicalId];
+    // Create working copy of books with V2 customizations applied
+    const workingBooks = books.map(book => {
+      const customization = customMappingsV2?.[book.canonicalId];
 
-      let standalonePatterns = [...m.standalonePatterns];
+      let standalonePatterns = [...(book.standalonePatterns || [])];
 
       if (customization) {
         // Apply deletions first (remove default patterns)
@@ -186,13 +177,13 @@ export class BookNormalizer {
         }
       }
 
-      return { ...m, standalonePatterns };
+      return { ...book, standalonePatterns };
     });
 
-    for (const mapping of workingMappings) {
-      if (mapping.standalonePatterns.length > 0) {
+    for (const book of workingBooks) {
+      if (book.standalonePatterns && book.standalonePatterns.length > 0) {
         // Sort by length (longest first) for greedy matching
-        const sorted = [...mapping.standalonePatterns].sort(
+        const sorted = [...book.standalonePatterns].sort(
           (a, b) => b.length - a.length
         );
 
@@ -207,7 +198,7 @@ export class BookNormalizer {
 
           patterns.push({
             pattern: regex,
-            bookId: mapping.canonicalId
+            bookId: book.canonicalId
           });
         }
       }

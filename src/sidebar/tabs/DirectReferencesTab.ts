@@ -1,6 +1,12 @@
 import { App, TFile, setIcon } from 'obsidian';
-import type { ExpandedReference, LinkBehavior, BibleRefSettings } from '../../types';
+import type { ExpandedReference, LinkBehavior, BibleRefSettings, ReferenceSortMode } from '../../types';
 import type { I18nService } from '../../i18n/I18nService';
+import {
+  sortByCanonicalOrder,
+  sortAlphabetically,
+  sortByCount,
+  makeVerseKey
+} from '../../utils/sortUtils';
 
 /**
  * DirectReferencesTab
@@ -15,6 +21,7 @@ export class DirectReferencesTab {
   private containerEl: HTMLElement;
   private currentFile: TFile | null = null;
   private currentRefs: ExpandedReference[] = [];
+  private sortMode: ReferenceSortMode = 'document';
 
   constructor(app: App, i18n: I18nService, settings: BibleRefSettings) {
     this.app = app;
@@ -25,9 +32,10 @@ export class DirectReferencesTab {
   /**
    * Set current file and references
    */
-  setData(file: TFile | null, refs: ExpandedReference[]): void {
+  setData(file: TFile | null, refs: ExpandedReference[], sortMode: ReferenceSortMode = 'document'): void {
     this.currentFile = file;
     this.currentRefs = refs;
+    this.sortMode = sortMode;
   }
 
   /**
@@ -49,14 +57,43 @@ export class DirectReferencesTab {
       return;
     }
 
-    // Group references by verse key
-    const groupedRefs = this.groupByVerse(this.currentRefs);
+    // Get sorted references
+    const sortedRefs = this.getSortedRefs();
+
+    // Group references by verse key (maintains sorted order due to Map insertion order)
+    const groupedRefs = this.groupByVerse(sortedRefs);
 
     // Create list wrapper with shared expandable styles
     const listEl = containerEl.createDiv('bible-ref-expandable-list');
 
     for (const [, refs] of groupedRefs) {
       this.renderVerseGroup(listEl, refs[0]);
+    }
+  }
+
+  /**
+   * Get references sorted according to current sort mode
+   */
+  private getSortedRefs(): ExpandedReference[] {
+    switch (this.sortMode) {
+      case 'canonical':
+        return sortByCanonicalOrder(this.currentRefs);
+
+      case 'alpha-asc':
+        return sortAlphabetically(this.currentRefs, false);
+
+      case 'alpha-desc':
+        return sortAlphabetically(this.currentRefs, true);
+
+      case 'count':
+        return sortByCount(this.currentRefs, (ref) => {
+          return this.findNotesWithVerse(ref).length;
+        });
+
+      case 'document':
+      default:
+        // Document order: use refs as-is (preserves order from parsing/frontmatter)
+        return this.currentRefs;
     }
   }
 

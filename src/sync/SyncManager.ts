@@ -18,6 +18,8 @@ export class SyncTimeoutError extends Error {
 
 /**
  * Execute a promise with a timeout
+ * Uses Promise.race() for cleaner implementation
+ *
  * @param promise Promise to execute
  * @param timeoutMs Timeout in milliseconds
  * @param operation Operation name for error message
@@ -28,21 +30,20 @@ async function withTimeout<T>(
   timeoutMs: number,
   operation: string
 ): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new SyncTimeoutError(operation, timeoutMs));
-    }, timeoutMs);
+  let timeoutId: ReturnType<typeof setTimeout>;
 
-    promise
-      .then((result) => {
-        clearTimeout(timeoutId);
-        resolve(result);
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      });
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new SyncTimeoutError(operation, timeoutMs)),
+      timeoutMs
+    );
   });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId!);
+  }
 }
 
 /**

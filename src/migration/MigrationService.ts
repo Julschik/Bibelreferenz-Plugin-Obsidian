@@ -1,5 +1,6 @@
 import { App, TFile, Notice } from 'obsidian';
 import type { BibleRefSettings, CanonicalIdMigration, MigrationQueueState } from '../types';
+import type { I18nService } from '../i18n/I18nService';
 
 /**
  * MigrationService
@@ -11,16 +12,19 @@ export class MigrationService {
   private app: App;
   private settings: BibleRefSettings;
   private saveSettings: () => Promise<void>;
+  private i18n: I18nService;
   private isRunning: boolean = false;
 
   constructor(
     app: App,
     settings: BibleRefSettings,
-    saveSettings: () => Promise<void>
+    saveSettings: () => Promise<void>,
+    i18n: I18nService
   ) {
     this.app = app;
     this.settings = settings;
     this.saveSettings = saveSettings;
+    this.i18n = i18n;
   }
 
   /**
@@ -32,8 +36,7 @@ export class MigrationService {
   async queueMigration(bookId: string, oldId: string, newId: string): Promise<void> {
     if (!this.settings.migrationQueue) {
       this.settings.migrationQueue = {
-        migrations: [],
-        isRunning: false
+        migrations: []
       };
     }
 
@@ -61,7 +64,7 @@ export class MigrationService {
     await this.saveSettings();
 
     // Show notice
-    new Notice(`Migration gestartet: ${oldId} → ${newId}`);
+    new Notice(this.i18n.t('noticeMigrationStarted', { oldId, newId }));
 
     // Start migration if not already running
     if (!this.isRunning) {
@@ -78,7 +81,6 @@ export class MigrationService {
     }
 
     this.isRunning = true;
-    this.settings.migrationQueue.isRunning = true;
     await this.saveSettings();
 
     while (this.settings.migrationQueue.migrations.length > 0) {
@@ -94,7 +96,6 @@ export class MigrationService {
     }
 
     this.isRunning = false;
-    this.settings.migrationQueue.isRunning = false;
     await this.saveSettings();
   }
 
@@ -135,7 +136,7 @@ export class MigrationService {
 
     const duration = ((migration.completedAt - migration.startedAt!) / 1000).toFixed(1);
 
-    new Notice(`Migration abgeschlossen: ${changedFiles}/${files.length} Dateien aktualisiert (${duration}s)`);
+    new Notice(this.i18n.t('noticeMigrationCompleted', { changed: changedFiles, total: files.length, duration }));
     console.log(`Migration completed: ${migration.oldId} → ${migration.newId} (${changedFiles} files changed)`);
   }
 
@@ -207,7 +208,6 @@ export class MigrationService {
       }
     }
 
-    this.settings.migrationQueue.isRunning = false;
     await this.saveSettings();
 
     // Restart migration queue

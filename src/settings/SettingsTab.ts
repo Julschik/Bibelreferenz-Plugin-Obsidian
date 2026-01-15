@@ -1,15 +1,16 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import type { BibleRefSettings, LinkBehavior, BookMapping } from '../types';
 import type BibleRefPlugin from '../main';
 import type { I18nService } from '../i18n/I18nService';
-import { LANGUAGE_PRESETS } from './presets';
+import { SUPPORTED_LOCALES, LANGUAGE_LABELS, type SupportedLanguage } from '../i18n/types';
+import { getLanguage, getBooks } from '../languages/registry';
+import type { BookLocalization, Locale } from '../languages/types';
 import { createDefaultSettings } from './defaultSettings';
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { SettingsCollapsibleSection } from './components/SettingsCollapsibleSection';
 import { BookMappingEditor } from './components/BookMappingEditor';
-import { BOOK_MAPPINGS_DE } from '../data/bookMappings.de';
-import { BOOK_MAPPINGS_EN } from '../data/bookMappings.en';
 import { getBooksByTestament } from '../data/testamentStructure';
+import { createLanguageMigrationService } from '../migration/LanguageMigration';
 
 /**
  * SettingsTab
@@ -111,17 +112,51 @@ export class BibleRefSettingsTab extends PluginSettingTab {
     new Setting(contentEl)
       .setName(this.i18n.t('settingsUiLanguage'))
       .setDesc(this.i18n.t('settingsUiLanguageDesc'))
-      .addDropdown(dropdown => dropdown
-        .addOption('de', 'Deutsch')
-        .addOption('en', 'English')
-        .setValue(this.settings.uiLanguage)
-        .onChange(async (value) => {
-          this.settings.uiLanguage = value as 'de' | 'en';
-          this.i18n.setLocale(value as 'de' | 'en');
-          await this.saveSettings();
-          this.display(); // Refresh UI with new language
-        })
-      );
+      .addDropdown(dropdown => {
+        // Add all supported languages
+        for (const locale of SUPPORTED_LOCALES) {
+          dropdown.addOption(locale, LANGUAGE_LABELS[locale]);
+        }
+        dropdown.setValue(this.settings.language)
+          .onChange(async (value) => {
+            const oldLocale = this.settings.language as Locale;
+            const newLocale = value as Locale;
+
+            if (oldLocale === newLocale) return;
+
+            // Get new language config
+            const newLangConfig = getLanguage(newLocale);
+
+            // Update settings
+            this.settings.language = newLocale;
+            this.settings.separators = { ...newLangConfig.separators };
+            this.settings.tagPrefix = newLangConfig.tagPrefix + '/';
+
+            // Update i18n
+            this.i18n.setLocale(newLocale);
+
+            // Run tag migration in the background
+            const migrationService = createLanguageMigrationService(this.app);
+            const strings = newLangConfig.strings;
+
+            // Save settings first, then migrate
+            await this.saveSettings();
+
+            // Migrate tags (shows progress notice automatically)
+            migrationService.migrateAllTags(oldLocale, newLocale, strings)
+              .then(result => {
+                if (result.errors.length > 0) {
+                  console.warn('Language migration errors:', result.errors);
+                }
+              })
+              .catch(error => {
+                console.error('Language migration failed:', error);
+                new Notice('Migration failed: ' + error.message);
+              });
+
+            this.display(); // Refresh UI with new language
+          });
+      });
   }
 
   private renderSyncSection(containerEl: HTMLElement): void {
@@ -175,27 +210,11 @@ export class BibleRefSettingsTab extends PluginSettingTab {
     });
 
     // Sync All Files button
-    if (this.onSyncAll) {
-      const syncAllSetting = new Setting(contentEl)
-        .setName(this.i18n.t('settingsSyncAllButton'))
-        .setDesc(this.i18n.t('settingsSyncAllButtonDesc'));
+    const syncAllSetting = new Setting(contentEl)
+      .setName(this.i18n.t('settingsSyncAllButton'))
+      .setDesc(this.i18n.t('settingsSyncAllButtonDesc'));
 
-      const buttonEl = syncAllSetting.controlEl.createEl('button', {
-        text: this.i18n.t('settingsSyncAllButtonText'),
-        cls: 'mod-cta'
-      });
-
-      buttonEl.addEventListener('click', async () => {
-        buttonEl.disabled = true;
-        buttonEl.setText(this.i18n.t('syncButtonSyncing'));
-        try {
-          await this.onSyncAll!();
-        } finally {
-          buttonEl.disabled = false;
-          buttonEl.setText(this.i18n.t('settingsSyncAllButtonText'));
-        }
-      });
-    }
+    this.createSyncButton(syncAllSetting, 'settingsSyncAllButtonText');
   }
 
   private renderFormatSection(containerEl: HTMLElement): void {
@@ -207,69 +226,44 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
     const contentEl = section.getContentElement();
 
+    // Show current separators (read-only info based on language)
+    const langConfig = getLanguage(this.settings.language as Locale);
+
     new Setting(contentEl)
-      .setName(this.i18n.t('settingsLanguagePreset'))
-      .setDesc(this.i18n.t('settingsLanguagePresetDesc'))
-      .addDropdown(dropdown => {
-        dropdown
-          .addOption('de', this.i18n.t('presetGerman'))
-          .addOption('en', this.i18n.t('presetEnglish'))
-          .addOption('custom', this.i18n.t('presetCustom'))
-          .setValue(this.settings.language)
-          .onChange(async (value) => {
-            this.settings.language = value as 'de' | 'en' | 'custom';
+      .setName(this.i18n.t('settingsChapterVerseSep'))
+      .setDesc(this.i18n.t('settingsChapterVerseSepDesc'))
+      .addText(text => text
+        .setValue(this.settings.separators.chapterVerse)
+        .setPlaceholder(langConfig.separators.chapterVerse)
+        .onChange(async (value) => {
+          this.settings.separators.chapterVerse = value || langConfig.separators.chapterVerse;
+          await this.saveSettings();
+        })
+      );
 
-            // Apply preset separators
-            if (value !== 'custom') {
-              const preset = LANGUAGE_PRESETS[value];
-              if (preset) {
-                this.settings.separators = { ...preset.separators };
-              }
-            }
+    new Setting(contentEl)
+      .setName(this.i18n.t('settingsListSep'))
+      .setDesc(this.i18n.t('settingsListSepDesc'))
+      .addText(text => text
+        .setValue(this.settings.separators.list)
+        .setPlaceholder(langConfig.separators.list)
+        .onChange(async (value) => {
+          this.settings.separators.list = value || langConfig.separators.list;
+          await this.saveSettings();
+        })
+      );
 
-            await this.saveSettings();
-            this.display(); // Refresh to show/hide custom separators
-          });
-      });
-
-    // Show custom separator settings only if "custom" is selected
-    if (this.settings.language === 'custom') {
-      new Setting(contentEl)
-        .setName(this.i18n.t('settingsChapterVerseSep'))
-        .setDesc(this.i18n.t('settingsChapterVerseSepDesc'))
-        .addText(text => text
-          .setPlaceholder(',')
-          .setValue(this.settings.separators.chapterVerse)
-          .onChange(async (value) => {
-            this.settings.separators.chapterVerse = value || ',';
-            await this.saveSettings();
-          })
-        );
-
-      new Setting(contentEl)
-        .setName(this.i18n.t('settingsListSep'))
-        .setDesc(this.i18n.t('settingsListSepDesc'))
-        .addText(text => text
-          .setPlaceholder('.')
-          .setValue(this.settings.separators.list)
-          .onChange(async (value) => {
-            this.settings.separators.list = value || '.';
-            await this.saveSettings();
-          })
-        );
-
-      new Setting(contentEl)
-        .setName(this.i18n.t('settingsRangeSep'))
-        .setDesc(this.i18n.t('settingsRangeSepDesc'))
-        .addText(text => text
-          .setPlaceholder('-')
-          .setValue(this.settings.separators.range)
-          .onChange(async (value) => {
-            this.settings.separators.range = value || '-';
-            await this.saveSettings();
-          })
-        );
-    }
+    new Setting(contentEl)
+      .setName(this.i18n.t('settingsRangeSep'))
+      .setDesc(this.i18n.t('settingsRangeSepDesc'))
+      .addText(text => text
+        .setValue(this.settings.separators.range)
+        .setPlaceholder(langConfig.separators.range)
+        .onChange(async (value) => {
+          this.settings.separators.range = value || langConfig.separators.range;
+          await this.saveSettings();
+        })
+      );
   }
 
   private renderFrontmatterSection(containerEl: HTMLElement): void {
@@ -345,27 +339,11 @@ export class BibleRefSettingsTab extends PluginSettingTab {
         );
 
       // Apply and Sync button
-      if (this.onSyncAll) {
-        const syncSetting = new Setting(contentEl)
-          .setName(this.i18n.t('settingsApplyAndSync'))
-          .setDesc(this.i18n.t('settingsApplyAndSyncDesc'));
+      const syncSetting = new Setting(contentEl)
+        .setName(this.i18n.t('settingsApplyAndSync'))
+        .setDesc(this.i18n.t('settingsApplyAndSyncDesc'));
 
-        const buttonEl = syncSetting.controlEl.createEl('button', {
-          text: this.i18n.t('settingsApplyAndSyncButton'),
-          cls: 'mod-cta'
-        });
-
-        buttonEl.addEventListener('click', async () => {
-          buttonEl.disabled = true;
-          buttonEl.setText(this.i18n.t('syncButtonSyncing'));
-          try {
-            await this.onSyncAll!();
-          } finally {
-            buttonEl.disabled = false;
-            buttonEl.setText(this.i18n.t('settingsApplyAndSyncButton'));
-          }
-        });
-      }
+      this.createSyncButton(syncSetting, 'settingsApplyAndSyncButton');
     }
   }
 
@@ -506,22 +484,20 @@ export class BibleRefSettingsTab extends PluginSettingTab {
       cls: 'setting-item-description'
     });
 
-    // Get current language mappings
-    const mappings = this.settings.language === 'en'
-      ? BOOK_MAPPINGS_EN
-      : BOOK_MAPPINGS_DE;
+    // Get current language book localizations from registry
+    const books = getBooks(this.settings.language as Locale);
 
     // Old Testament section
-    this.renderTestamentSection(section, 'old', mappings);
+    this.renderTestamentSection(section, 'old', books);
 
     // New Testament section
-    this.renderTestamentSection(section, 'new', mappings);
+    this.renderTestamentSection(section, 'new', books);
   }
 
   private renderTestamentSection(
     containerEl: HTMLElement,
     testament: 'old' | 'new',
-    mappings: BookMapping[]
+    books: BookLocalization[]
   ): void {
     const testamentDiv = containerEl.createDiv('bible-ref-testament-section');
 
@@ -537,35 +513,43 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
     const contentEl = collapsible.getContentElement();
 
-    // Get books for this testament
-    const bookIds = getBooksByTestament(testament);
+    // Get book IDs for this testament (numeric IDs from testamentStructure)
+    const testamentBookIds = getBooksByTestament(testament);
 
-    for (const bookId of bookIds) {
-      const mapping = mappings.find(m => m.canonicalId === bookId);
-      if (!mapping) continue;
+    for (const bookIdStr of testamentBookIds) {
+      // Find book by displayId (testamentStructure still uses old string IDs)
+      const book = books.find(b => b.displayId === bookIdStr);
+      if (!book) continue;
 
-      this.renderBookSection(contentEl, mapping);
+      this.renderBookSection(contentEl, book);
     }
   }
 
-  private renderBookSection(containerEl: HTMLElement, mapping: BookMapping): void {
+  private renderBookSection(containerEl: HTMLElement, book: BookLocalization): void {
     const bookDiv = containerEl.createDiv('bible-ref-book-section');
 
+    // Convert BookLocalization to BookMapping format for compatibility with BookMappingEditor
+    const mapping: BookMapping = {
+      canonicalId: book.displayId,
+      aliases: book.aliases,
+      standalonePatterns: book.standalonePatterns || []
+    };
+
     const collapsible = new CollapsibleSection(bookDiv, {
-      title: `${mapping.canonicalId} - ${mapping.aliases[0]}`,
+      title: `${book.displayId} - ${book.displayName}`,
       defaultExpanded: false,
       onToggle: (expanded) => {
         if (expanded) {
           // Check if editor already exists
-          let editor = this.bookEditors.get(mapping.canonicalId);
+          let editor = this.bookEditors.get(book.displayId);
 
           if (!editor) {
             // First time: create editor
             editor = this.renderBookEditor(collapsible.getContentElement(), mapping);
-            this.bookEditors.set(mapping.canonicalId, editor);
+            this.bookEditors.set(book.displayId, editor);
           } else {
             // Re-expand: update editor with latest data
-            const customization = this.settings.customBookMappingsV2?.[mapping.canonicalId];
+            const customization = this.settings.customBookMappingsV2?.[book.displayId];
             editor.update(customization);
           }
         }
@@ -623,8 +607,8 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
     // JSON textarea (advanced editing)
     new Setting(contentEl)
-      .setName('Custom Book Mappings V2 (JSON)')
-      .setDesc('Advanced: Edit the raw JSON structure')
+      .setName(this.i18n.t('settingsBookMappingsJson'))
+      .setDesc(this.i18n.t('settingsBookMappingsJsonDesc'))
       .addTextArea(text => text
         .setPlaceholder('{}')
         .setValue(JSON.stringify(this.settings.customBookMappingsV2 || {}, null, 2))
@@ -642,5 +626,30 @@ export class BibleRefSettingsTab extends PluginSettingTab {
 
   async saveSettings(): Promise<void> {
     await this.onSettingsChange(this.settings);
+  }
+
+  /**
+   * Helper to create a sync button with consistent loading/disabled behavior
+   * @param settingEl The Setting element to add the button to
+   * @param labelKey The i18n key for the button label
+   */
+  private createSyncButton(settingEl: Setting, labelKey: string): void {
+    if (!this.onSyncAll) return;
+
+    const buttonEl = settingEl.controlEl.createEl('button', {
+      text: this.i18n.t(labelKey),
+      cls: 'mod-cta'
+    });
+
+    buttonEl.addEventListener('click', async () => {
+      buttonEl.disabled = true;
+      buttonEl.setText(this.i18n.t('syncButtonSyncing'));
+      try {
+        await this.onSyncAll!();
+      } finally {
+        buttonEl.disabled = false;
+        buttonEl.setText(this.i18n.t(labelKey));
+      }
+    });
   }
 }
