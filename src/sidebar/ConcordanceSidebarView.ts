@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, TFile, MarkdownView, setIcon } from 'obsidian';
 import type BibleRefPlugin from '../main';
-import type { ExpandedReference } from '../types';
+import type { ExpandedReference, ReferenceSortMode } from '../types';
 import { SyncButton } from './SyncButton';
 import { QuickSettingsButton } from './QuickSettingsButton';
 import { DirectReferencesTab } from './tabs/DirectReferencesTab';
@@ -30,6 +30,7 @@ export class ConcordanceSidebarView extends ItemView {
   private currentFile: TFile | null = null;
   private currentReferences: ExpandedReference[] = [];
   private activeTab: TabId = 'direct';
+  private sortMode: ReferenceSortMode = 'document';
 
   // Tab components
   private directTab: DirectReferencesTab;
@@ -105,7 +106,12 @@ export class ConcordanceSidebarView extends ItemView {
       this.plugin.i18n,
       async () => {
         await this.plugin.syncAllFiles();
-      }
+      },
+      (mode: ReferenceSortMode) => {
+        this.sortMode = mode;
+        this.renderActiveTab();
+      },
+      () => this.sortMode
     );
 
     // Create tab bar
@@ -291,9 +297,9 @@ export class ConcordanceSidebarView extends ItemView {
   private renderActiveTab(): void {
     if (!this.tabContentEl) return;
 
-    // Update tab data
-    this.directTab.setData(this.currentFile, this.currentReferences);
-    this.parallelTab.setData(this.currentFile, this.currentReferences);
+    // Update tab data with sort mode
+    this.directTab.setData(this.currentFile, this.currentReferences, this.sortMode);
+    this.parallelTab.setData(this.currentFile, this.currentReferences, this.sortMode);
 
     // Update settings in case they changed
     this.directTab.updateSettings(this.plugin.settings);

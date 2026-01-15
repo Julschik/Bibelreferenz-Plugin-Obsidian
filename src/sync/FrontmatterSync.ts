@@ -56,7 +56,10 @@ export class FrontmatterSync {
       // Also check if granularity setting has changed (when writeToTagsField is enabled)
       const granularityChanged = await this.hasGranularityChanged(file);
 
-      if (tagsEqual && !granularityChanged) {
+      // Check if Bible tags need to be cleaned from tags field (when writeToTagsField is disabled)
+      const needsCleanup = await this.needsTagsFieldCleanup(file);
+
+      if (tagsEqual && !granularityChanged && !needsCleanup) {
         return false; // No changes needed
       }
 
@@ -97,6 +100,39 @@ export class FrontmatterSync {
       if (!storedGranularity) return true;
 
       return storedGranularity !== currentGranularity;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if Bible tags need to be cleaned from the tags field
+   * This happens when writeToTagsField was disabled but Bible tags still exist
+   * @param file The file to check
+   * @returns true if cleanup is needed
+   */
+  private async needsTagsFieldCleanup(file: TFile): Promise<boolean> {
+    // Only relevant when writeToTagsField is disabled
+    if (this.settings.writeToTagsField) {
+      return false;
+    }
+
+    try {
+      const cache = this.app.metadataCache.getFileCache(file);
+      const frontmatter = cache?.frontmatter;
+
+      if (!frontmatter?.tags) return false;
+
+      const existingTags: string[] = Array.isArray(frontmatter.tags)
+        ? frontmatter.tags
+        : [frontmatter.tags];
+
+      const tagPrefix = this.settings.tagPrefix;
+
+      // Check if any Bible tags still exist in the tags field
+      return existingTags.some(
+        (t: unknown) => typeof t === 'string' && t.startsWith(tagPrefix)
+      );
     } catch {
       return false;
     }
@@ -205,6 +241,23 @@ export class FrontmatterSync {
       } else {
         // Clean up granularity field if writeToTagsField is disabled
         delete frontmatter['_bible_refs_granularity'];
+
+        // Also remove Bible tags from the tags field when Graph View is disabled
+        if (frontmatter.tags) {
+          const existingTags: string[] = Array.isArray(frontmatter.tags)
+            ? frontmatter.tags
+            : [frontmatter.tags];
+
+          const nonBibleTags = existingTags.filter(
+            (t: unknown) => typeof t === 'string' && !t.startsWith(tagPrefix)
+          );
+
+          if (nonBibleTags.length === 0) {
+            delete frontmatter.tags;
+          } else {
+            frontmatter.tags = nonBibleTags;
+          }
+        }
       }
     });
   }

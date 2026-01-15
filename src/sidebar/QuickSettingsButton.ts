@@ -1,6 +1,7 @@
 import { setIcon } from 'obsidian';
 import type BibleRefPlugin from '../main';
 import type { I18nService } from '../i18n/I18nService';
+import type { ReferenceSortMode } from '../types';
 
 /**
  * QuickSettingsButton
@@ -14,6 +15,8 @@ export class QuickSettingsButton {
   private plugin: BibleRefPlugin;
   private i18n: I18nService;
   private onSyncCallback: () => Promise<void>;
+  private onSortModeChange: (mode: ReferenceSortMode) => void;
+  private getCurrentSortMode: () => ReferenceSortMode;
   private sidebarEl: HTMLElement;
   private popupEl: HTMLElement | null = null;
   private overlayEl: HTMLElement | null = null;
@@ -22,11 +25,15 @@ export class QuickSettingsButton {
     containerEl: HTMLElement,
     plugin: BibleRefPlugin,
     i18n: I18nService,
-    onSync: () => Promise<void>
+    onSync: () => Promise<void>,
+    onSortModeChange: (mode: ReferenceSortMode) => void,
+    getCurrentSortMode: () => ReferenceSortMode
   ) {
     this.plugin = plugin;
     this.i18n = i18n;
     this.onSyncCallback = onSync;
+    this.onSortModeChange = onSortModeChange;
+    this.getCurrentSortMode = getCurrentSortMode;
     // Get the sidebar container (parent of the header)
     this.sidebarEl = containerEl.closest('.bible-ref-sidebar') as HTMLElement;
     this.render(containerEl);
@@ -87,7 +94,7 @@ export class QuickSettingsButton {
 
     // Header
     const headerEl = this.popupEl.createDiv('bible-ref-quick-settings-header');
-    headerEl.createSpan({ text: this.i18n.t('quickSettingsTooltip') });
+    headerEl.createSpan({ text: this.i18n.t('quickSettingsTitle') });
 
     const closeBtn = headerEl.createEl('button', {
       cls: 'clickable-icon bible-ref-quick-settings-close'
@@ -98,17 +105,23 @@ export class QuickSettingsButton {
     // Content
     const contentEl = this.popupEl.createDiv('bible-ref-quick-settings-content');
 
-    // Write to tags toggle
-    const writeToTagsRow = contentEl.createDiv('bible-ref-quick-settings-row');
-    const writeToTagsLabel = writeToTagsRow.createDiv('bible-ref-quick-settings-label');
-    writeToTagsLabel.createSpan({ text: this.i18n.t('settingsWriteToTags') });
+    // ═══════════════════════════════════════════════════════════════
+    // Graph View Card
+    // ═══════════════════════════════════════════════════════════════
+    const graphCard = contentEl.createDiv('bible-ref-settings-card');
 
-    const toggleEl = writeToTagsRow.createDiv('bible-ref-quick-settings-toggle');
-    const checkbox = toggleEl.createEl('input', {
-      type: 'checkbox',
-      cls: 'checkbox-container'
+    // Card header with title and toggle
+    const graphCardHeader = graphCard.createDiv('bible-ref-settings-card-header');
+    graphCardHeader.createSpan({
+      text: this.i18n.t('settingsGraphViewSection'),
+      cls: 'bible-ref-settings-card-title'
     });
+
+    // Toggle switch in header
+    const toggleEl = graphCardHeader.createEl('label', { cls: 'bible-ref-quick-settings-toggle' });
+    const checkbox = toggleEl.createEl('input', { type: 'checkbox' });
     checkbox.checked = writeToTags;
+    toggleEl.createSpan({ cls: 'bible-ref-toggle-slider' });
     checkbox.addEventListener('change', async () => {
       this.plugin.settings.writeToTagsField = checkbox.checked;
       await this.plugin.saveSettings();
@@ -117,7 +130,7 @@ export class QuickSettingsButton {
 
     // Granularity section (only if writeToTags is enabled)
     if (writeToTags) {
-      const granularitySection = contentEl.createDiv('bible-ref-quick-settings-section');
+      const granularitySection = graphCard.createDiv('bible-ref-quick-settings-section');
       granularitySection.createDiv({
         text: this.i18n.t('quickSettingsGranularity'),
         cls: 'bible-ref-quick-settings-section-title'
@@ -134,11 +147,9 @@ export class QuickSettingsButton {
           cls: `bible-ref-quick-settings-option ${currentGranularity === g.id ? 'is-selected' : ''}`
         });
 
-        const radioEl = optionEl.createEl('input', {
-          type: 'radio',
-          attr: { name: 'granularity', value: g.id }
-        });
-        radioEl.checked = currentGranularity === g.id;
+        // Custom indicator with checkmark
+        const indicator = optionEl.createDiv({ cls: 'bible-ref-option-indicator' });
+        indicator.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
         optionEl.createSpan({ text: g.label });
 
@@ -148,6 +159,43 @@ export class QuickSettingsButton {
           this.refreshPopup();
         });
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Sort Order Card
+    // ═══════════════════════════════════════════════════════════════
+    const sortCard = contentEl.createDiv('bible-ref-settings-card');
+
+    // Card header
+    const sortCardHeader = sortCard.createDiv('bible-ref-settings-card-header');
+    sortCardHeader.createSpan({
+      text: this.i18n.t('sortOrderSection'),
+      cls: 'bible-ref-settings-card-title'
+    });
+
+    const currentSort = this.getCurrentSortMode();
+    const sortOptions: Array<{ id: ReferenceSortMode; labelKey: string }> = [
+      { id: 'document', labelKey: 'sortDocument' },
+      { id: 'canonical', labelKey: 'sortCanonical' },
+      { id: 'alpha-asc', labelKey: 'sortAlphaAsc' },
+      { id: 'alpha-desc', labelKey: 'sortAlphaDesc' },
+      { id: 'count', labelKey: 'sortCount' }
+    ];
+
+    for (const option of sortOptions) {
+      const optionEl = sortCard.createDiv({
+        cls: `bible-ref-quick-settings-option ${currentSort === option.id ? 'is-selected' : ''}`
+      });
+
+      const indicator = optionEl.createDiv({ cls: 'bible-ref-option-indicator' });
+      indicator.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+      optionEl.createSpan({ text: this.i18n.t(option.labelKey) });
+
+      optionEl.addEventListener('click', () => {
+        this.onSortModeChange(option.id);
+        this.refreshPopup();
+      });
     }
 
     // Sync button

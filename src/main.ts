@@ -33,14 +33,15 @@ export default class BibleRefPlugin extends Plugin {
     // Load settings (includes migration)
     await this.loadSettings();
 
-    // Initialize I18nService
-    this.i18n = createI18nService(this.settings.uiLanguage);
+    // Initialize I18nService (unified language setting)
+    this.i18n = createI18nService(this.settings.language);
 
     // Initialize MigrationService
     this.migrationService = new MigrationService(
       this.app,
       this.settings,
-      this.saveSettings.bind(this)
+      this.saveSettings.bind(this),
+      this.i18n
     );
 
     // Resume any pending migrations
@@ -236,11 +237,16 @@ export default class BibleRefPlugin extends Plugin {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // MIGRATION 3: Add new settings with defaults
+    // MIGRATION 3: Migrate uiLanguage → language (unified setting)
     // ═══════════════════════════════════════════════════════════════
-    if (this.settings.uiLanguage === undefined) {
-      this.settings.uiLanguage = 'de';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const oldSettings = this.settings as any;
+    if (oldSettings.uiLanguage !== undefined && !this.settings.language) {
+      // Migrate old uiLanguage to new unified language setting
+      this.settings.language = oldSettings.uiLanguage;
+      delete oldSettings.uiLanguage;
       needsSave = true;
+      console.log('Migration: uiLanguage → language');
     }
     if (this.settings.linkBehavior === undefined) {
       this.settings.linkBehavior = 'same-tab';
@@ -294,8 +300,7 @@ export default class BibleRefPlugin extends Plugin {
       if (migrationCount > 0) {
         // Delay notice until app is ready
         this.app.workspace.onLayoutReady(() => {
-          // Use default German text since i18n isn't initialized yet
-          new Notice(`${migrationCount} Dateien zum neuen Format migriert`);
+          new Notice(this.i18n.t('noticeMigrationCompleted', { count: migrationCount }));
         });
       }
     }
@@ -345,8 +350,8 @@ export default class BibleRefPlugin extends Plugin {
     await this.saveSettings();
 
     // Update I18n locale if language changed
-    if (this.i18n.getLocale() !== newSettings.uiLanguage) {
-      this.i18n.setLocale(newSettings.uiLanguage);
+    if (this.i18n.getLocale() !== newSettings.language) {
+      this.i18n.setLocale(newSettings.language);
     }
 
     // Update SyncManager with new settings

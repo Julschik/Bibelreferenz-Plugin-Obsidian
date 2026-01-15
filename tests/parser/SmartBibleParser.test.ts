@@ -66,7 +66,7 @@ describe('SmartBibleParser', () => {
       it('should parse "1. Mose 3,15"', () => {
         const result = parser.parse('Siehe 1. Mose 3,15');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('Gen');
+        expect(result[0].bookId).toBe('Gen');  // German displayId
         expect(result[0].startChapter).toBe(3);
         expect(result[0].startVerse).toBe(15);
       });
@@ -74,14 +74,14 @@ describe('SmartBibleParser', () => {
       it('should parse "1Mose 3,15" (no space)', () => {
         const result = parser.parse('Siehe 1Mose 3,15');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('Gen');
+        expect(result[0].bookId).toBe('Gen');  // German displayId
       });
 
       it('should parse multiple references in text', () => {
         const result = parser.parse('Vergleiche Joh 3,16 mit Röm 5,8');
         expect(result).toHaveLength(2);
         expect(result[0].bookId).toBe('Joh');
-        expect(result[1].bookId).toBe('Rom');
+        expect(result[1].bookId).toBe('Rom');  // German ID
       });
     });
 
@@ -99,7 +99,7 @@ describe('SmartBibleParser', () => {
       it('should parse "Ps 23,1-6"', () => {
         const result = parser.parse('Ps 23,1-6');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('Psa');
+        expect(result[0].bookId).toBe('Psa');  // German ID
         expect(result[0].startVerse).toBe(1);
         expect(result[0].endVerse).toBe(6);
       });
@@ -165,7 +165,7 @@ describe('SmartBibleParser', () => {
       it('should parse "1 Kor 13" (chapter reference)', () => {
         const result = parser.parse('Siehe 1 Kor 13');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('1Co');
+        expect(result[0].bookId).toBe('1Co');  // German ID
         expect(result[0].startChapter).toBe(13);
         expect(result[0].granularity).toBe('chapter');
       });
@@ -184,14 +184,14 @@ describe('SmartBibleParser', () => {
       it('should parse "Kolosserbrief"', () => {
         const result = parser.parse('Text Kolosserbrief');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('Col');
+        expect(result[0].bookId).toBe('Col');  // German ID
         expect(result[0].granularity).toBe('book');
       });
 
       it('should parse "Philemonbrief"', () => {
         const result = parser.parse('Siehe Philemonbrief');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('Phm');
+        expect(result[0].bookId).toBe('Phm');  // German ID
         expect(result[0].granularity).toBe('book');
       });
     });
@@ -202,26 +202,26 @@ describe('SmartBibleParser', () => {
         for (const format of formats) {
           const result = parser.parse(format);
           expect(result).toHaveLength(1);
-          expect(result[0].bookId).toBe('Gen');
+          expect(result[0].bookId).toBe('Gen');  // German displayId
         }
       });
 
       it('should parse 1. Korinther', () => {
         const result = parser.parse('1. Korinther 13,4');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('1Co');
+        expect(result[0].bookId).toBe('1Co');  // German ID
       });
 
       it('should parse 2. Korinther', () => {
         const result = parser.parse('2. Korinther 5,17');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('2Co');
+        expect(result[0].bookId).toBe('2Co');  // German ID
       });
 
       it('should parse 1. Johannes', () => {
         const result = parser.parse('1. Johannes 4,8');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('1Jo');
+        expect(result[0].bookId).toBe('1Jo');  // German ID
       });
     });
   });
@@ -237,7 +237,7 @@ describe('SmartBibleParser', () => {
       it('should parse "John 3:16"', () => {
         const result = parser.parse('See John 3:16');
         expect(result).toHaveLength(1);
-        expect(result[0].bookId).toBe('Joh');
+        expect(result[0].bookId).toBe('Joh');  // English ID
         expect(result[0].startChapter).toBe(3);
         expect(result[0].startVerse).toBe(16);
       });
@@ -321,7 +321,7 @@ But Röm 5,8 is parsed
       `;
       const result = parser.parse(content);
       expect(result).toHaveLength(1);
-      expect(result[0].bookId).toBe('Rom');
+      expect(result[0].bookId).toBe('Rom');  // German ID
     });
   });
 
@@ -381,9 +381,9 @@ und Kol 1,15-20.
 
       const bookIds = result.map(r => r.bookId);
       expect(bookIds).toContain('Joh');
-      expect(bookIds).toContain('Rom');
-      expect(bookIds).toContain('1Jo');
-      expect(bookIds).toContain('Col');
+      expect(bookIds).toContain('Rom');   // German ID
+      expect(bookIds).toContain('1Jo');  // German ID
+      expect(bookIds).toContain('Col');   // German ID
     });
 
     it('should handle edge case: back-to-back references', () => {
@@ -394,13 +394,13 @@ und Kol 1,15-20.
     it('should handle Psalms', () => {
       const result = parser.parse('Psalm 23,1 und Ps 91');
       expect(result).toHaveLength(2);
-      expect(result.every(r => r.bookId === 'Psa')).toBe(true);
+      expect(result.every(r => r.bookId === 'Psa')).toBe(true);  // German ID
     });
 
     it('should handle Proverbs', () => {
       const result = parser.parse('Sprüche 3,5-6');
       expect(result).toHaveLength(1);
-      expect(result[0].bookId).toBe('Pro');
+      expect(result[0].bookId).toBe('Pro');  // German ID
     });
   });
 
@@ -524,7 +524,7 @@ und Kol 1,15-20.
       const englishParser = new SmartBibleParser(createEnglishSettings());
       const result = englishParser.parse('John 3:16');
       expect(result).toHaveLength(1);
-      expect(result[0].bookId).toBe('Joh');
+      expect(result[0].bookId).toBe('Joh');  // English ID
       expect(result[0].startChapter).toBe(3);
       expect(result[0].startVerse).toBe(16);
     });
@@ -561,27 +561,27 @@ und Kol 1,15-20.
       expect(result[0].endChapter).toBe(4);
     });
 
-    it('✓ "Kolosserbrief" → bible/Col (Buch-Level)', () => {
+    it('✓ "Kolosserbrief" → bible/Kol (Buch-Level)', () => {
       const result = parser.parse('Kolosserbrief');
-      expect(result[0].bookId).toBe('Col');
+      expect(result[0].bookId).toBe('Col');  // German ID
       expect(result[0].granularity).toBe('book');
     });
 
-    it('✓ "1. Mose 3,15" → bible/Gen/3/15', () => {
+    it('✓ "1. Mose 3,15" → Bibel/1Mo/3/15', () => {
       const result = parser.parse('1. Mose 3,15');
-      expect(result[0].bookId).toBe('Gen');
+      expect(result[0].bookId).toBe('Gen');  // German displayId
       expect(result[0].startChapter).toBe(3);
       expect(result[0].startVerse).toBe(15);
     });
 
-    it('✓ "1Mose 3,15" → bible/Gen/3/15', () => {
+    it('✓ "1Mose 3,15" → Bibel/1Mo/3/15', () => {
       const result = parser.parse('1Mose 3,15');
-      expect(result[0].bookId).toBe('Gen');
+      expect(result[0].bookId).toBe('Gen');  // German displayId
     });
 
-    it('✓ "1 Kor 13" → bible/1Co/13 (Kapitel-Level)', () => {
+    it('✓ "1 Kor 13" → bible/1Kor/13 (Kapitel-Level)', () => {
       const result = parser.parse('1 Kor 13');
-      expect(result[0].bookId).toBe('1Co');
+      expect(result[0].bookId).toBe('1Co');  // German ID
       expect(result[0].startChapter).toBe(13);
       expect(result[0].granularity).toBe('chapter');
     });

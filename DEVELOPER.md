@@ -872,6 +872,4 @@ refactor: Extract regex utilities to separate module
 
 GNU GPL v3.0 - See [LICENSE](LICENSE) for details.
 
----
 
-*Soli Deo Gloria*

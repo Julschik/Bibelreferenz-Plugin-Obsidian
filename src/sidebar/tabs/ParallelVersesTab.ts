@@ -1,6 +1,7 @@
 import { App, TFile, setIcon } from 'obsidian';
-import type { ExpandedReference, BibleRefSettings } from '../../types';
+import type { ExpandedReference, BibleRefSettings, ReferenceSortMode } from '../../types';
 import type { I18nService } from '../../i18n/I18nService';
+import { getCanonicalBookIndex } from '../../utils/sortUtils';
 
 interface CoOccurrenceData {
   count: number;
@@ -22,6 +23,7 @@ export class ParallelVersesTab {
   private containerEl: HTMLElement;
   private currentFile: TFile | null = null;
   private currentRefs: ExpandedReference[] = [];
+  private sortMode: ReferenceSortMode = 'document';
 
   constructor(app: App, i18n: I18nService, settings: BibleRefSettings) {
     this.app = app;
@@ -32,9 +34,10 @@ export class ParallelVersesTab {
   /**
    * Set current file and references
    */
-  setData(file: TFile | null, refs: ExpandedReference[]): void {
+  setData(file: TFile | null, refs: ExpandedReference[], sortMode: ReferenceSortMode = 'document'): void {
     this.currentFile = file;
     this.currentRefs = refs;
+    this.sortMode = sortMode;
   }
 
   /**
@@ -64,13 +67,45 @@ export class ParallelVersesTab {
       return;
     }
 
-    // Render parallel verses sorted by count
-    const sorted = [...coOccurrences.entries()].sort((a, b) => b[1].count - a[1].count);
+    // Sort parallel verses based on current sort mode
+    const sorted = this.sortCoOccurrences([...coOccurrences.entries()]);
 
     const listEl = containerEl.createDiv('bible-ref-expandable-list');
 
     for (const [verseKey, data] of sorted) {
       this.renderParallelVerse(listEl, verseKey, data);
+    }
+  }
+
+  /**
+   * Sort co-occurrences according to current sort mode
+   */
+  private sortCoOccurrences(
+    entries: [string, CoOccurrenceData][]
+  ): [string, CoOccurrenceData][] {
+    switch (this.sortMode) {
+      case 'canonical':
+        return entries.sort((a, b) => {
+          const refA = a[1].ref;
+          const refB = b[1].ref;
+          const bookDiff = getCanonicalBookIndex(refA.bookId) - getCanonicalBookIndex(refB.bookId);
+          if (bookDiff !== 0) return bookDiff;
+          if (refA.chapter !== refB.chapter) return refA.chapter - refB.chapter;
+          return refA.verse - refB.verse;
+        });
+
+      case 'alpha-asc':
+        return entries.sort((a, b) => a[0].localeCompare(b[0]));
+
+      case 'alpha-desc':
+        return entries.sort((a, b) => b[0].localeCompare(a[0]));
+
+      case 'count':
+      case 'document':
+      default:
+        // Document order doesn't apply to parallels (they come from other notes)
+        // Fall back to count sort (most relevant parallels first)
+        return entries.sort((a, b) => b[1].count - a[1].count);
     }
   }
 

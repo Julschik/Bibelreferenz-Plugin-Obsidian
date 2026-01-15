@@ -2,8 +2,8 @@ import { App, TFile, setIcon } from 'obsidian';
 import type { BibleRefSettings } from '../../types';
 import type { I18nService } from '../../i18n/I18nService';
 import { BIBLE_BOOK_ORDER } from '../../data/bibleStructure';
-import { getBookMappingDE } from '../../data/bookMappings.de';
-import { getBookMappingEN } from '../../data/bookMappings.en';
+import { getBookByDisplayId } from '../../languages/registry';
+import type { Locale } from '../../languages/types';
 
 /**
  * ReferenceIndex
@@ -387,12 +387,10 @@ export class GlobalBrowserTab {
    * Returns full book name (e.g., "Johannes") instead of abbreviation (e.g., "Joh")
    */
   private getBookDisplayName(bookId: string): string {
-    const mapping = this.settings.uiLanguage === 'de'
-      ? getBookMappingDE(bookId)
-      : getBookMappingEN(bookId);
+    const book = getBookByDisplayId(this.settings.language as Locale, bookId);
 
-    // Return first alias (typically the full name) or fall back to bookId
-    return mapping?.aliases[0] || bookId;
+    // Return displayName or fall back to bookId
+    return book?.displayName || bookId;
   }
 
   /**

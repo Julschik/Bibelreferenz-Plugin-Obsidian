@@ -1,6 +1,7 @@
-import type { ParsedReference, ExpandedReference, BibleRefSettings } from '../types';
+import type { ParsedReference, ExpandedReference, BibleRefSettings, Locale } from '../types';
 import { RangeExpander } from '../parser/RangeExpander';
 import { DisplayIdResolver, createDisplayIdResolver } from '../parser/DisplayIdResolver';
+import { getDisplayId } from '../languages/registry';
 
 /**
  * TagGenerator
@@ -49,13 +50,21 @@ export class TagGenerator {
 
   /**
    * Generate tags for a single parsed reference
-   * @param ref Parsed reference
+   * @param ref Parsed reference (bookId is canonicalId like "Gen", "Joh")
    * @returns Array of tag strings
    */
   private generateTagsForReference(ref: ParsedReference): string[] {
     const prefix = this.settings.tagPrefix;
-    // Use display ID instead of canonical ID
-    const displayId = this.displayIdResolver.getDisplayId(ref.bookId);
+    const locale = this.settings.language as Locale;
+
+    // ref.bookId is canonicalId (e.g., "Gen"), get language-specific displayId
+    // First check for custom pinned display ID
+    let displayId = this.displayIdResolver.getDisplayId(ref.bookId);
+
+    // If no custom pinning, get default displayId from language config
+    if (displayId === ref.bookId) {
+      displayId = getDisplayId(locale, ref.bookId);
+    }
 
     switch (ref.granularity) {
       case 'book':

@@ -1,5 +1,6 @@
 import type { BibleRefSettings } from '../types';
-import type { Locale } from '../i18n/locales';
+import type { SupportedLanguage } from '../i18n/types';
+import { getLanguage } from '../languages/registry';
 
 /**
  * Default Settings
@@ -12,13 +13,12 @@ import type { Locale } from '../i18n/locales';
  * Create default settings with dynamic locale
  * @param locale Detected or specified locale
  */
-export function createDefaultSettings(locale: Locale = 'en'): BibleRefSettings {
-  // Determine format separators based on locale
-  const isGerman = locale === 'de';
+export function createDefaultSettings(locale: SupportedLanguage = 'en'): BibleRefSettings {
+  const langConfig = getLanguage(locale);
 
   return {
-    // UI Language (dynamically detected)
-    uiLanguage: locale,
+    // Language setting (unified: controls both UI and parsing)
+    language: locale,
 
     // Sync options (only on-save by default, no live sync while typing)
     syncOptions: {
@@ -26,15 +26,13 @@ export function createDefaultSettings(locale: Locale = 'en'): BibleRefSettings {
       onFileChange: false
     },
 
-    // Format preset (determines book name format and separators)
-    language: locale,
-    separators: isGerman
-      ? { chapterVerse: ',', list: '.', range: '-' }  // German: Joh 3,16
-      : { chapterVerse: ':', list: ',', range: '-' }, // English: John 3:16
+    // Separators from language config
+    separators: { ...langConfig.separators },
 
     // Frontmatter (underscore prefix for less prominent display in Obsidian)
     frontmatterKey: '_bible_refs',
-    tagPrefix: 'bible/',
+    // Tag prefix from language config (e.g., "Bibel/" for DE, "Bible/" for EN)
+    tagPrefix: langConfig.tagPrefix + '/',
 
     // Graph View settings
     writeToTagsField: true,         // Enabled by default for graph view visibility

@@ -1,16 +1,25 @@
 import { moment } from 'obsidian';
-import { LOCALES, type Locale, type LocaleStrings } from './locales';
+import type { Locale, LocaleStrings } from './types';
+import { getStrings } from '../languages/registry';
+
+// Re-export types for convenience
+export type { Locale, LocaleStrings } from './types';
+export { SUPPORTED_LOCALES } from './types';
 
 /**
  * Detect system locale based on Obsidian's moment locale
  * Obsidian uses moment.js internally and sets the locale based on user's system settings
- * @returns Detected locale ('de' or 'en')
+ * @returns Detected locale
  */
 export function detectSystemLocale(): Locale {
   // Use Obsidian's moment locale (reflects system/Obsidian language settings)
   const momentLocale = moment.locale() || '';
 
   if (momentLocale.startsWith('de')) return 'de';
+  if (momentLocale.startsWith('es')) return 'es';
+  if (momentLocale.startsWith('fr')) return 'fr';
+  if (momentLocale.startsWith('pt')) return 'pt';
+  if (momentLocale.startsWith('it')) return 'it';
 
   // Default to English for all other locales
   return 'en';
@@ -28,7 +37,7 @@ export class I18nService {
 
   constructor(locale: Locale = 'de') {
     this.locale = locale;
-    this.strings = LOCALES[locale];
+    this.strings = getStrings(locale);
   }
 
   /**
@@ -65,7 +74,7 @@ export class I18nService {
    */
   setLocale(locale: Locale): void {
     this.locale = locale;
-    this.strings = LOCALES[locale];
+    this.strings = getStrings(locale);
   }
 }
 

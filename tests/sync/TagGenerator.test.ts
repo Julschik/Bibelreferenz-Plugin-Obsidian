@@ -30,26 +30,26 @@ describe('TagGenerator', () => {
       const refs: ParsedReference[] = [
         {
           raw: 'Kolosserbrief',
-          bookId: 'Col',
+          bookId: 'Kol',
           granularity: 'book'
         }
       ];
 
       const tags = generator.generateTags(refs);
 
-      expect(tags).toContain('bible/Col');
+      expect(tags).toContain('bible/Kol');
     });
 
     it('should generate book tag for multiple books', () => {
       const refs: ParsedReference[] = [
-        { raw: 'Kolosserbrief', bookId: 'Col', granularity: 'book' },
+        { raw: 'Kolosserbrief', bookId: 'Kol', granularity: 'book' },
         { raw: 'Genesis', bookId: 'Gen', granularity: 'book' }
       ];
 
       const tags = generator.generateTags(refs);
 
-      expect(tags).toContain('bible/Col');
-      expect(tags).toContain('bible/Gen');
+      expect(tags).toContain('bible/Kol');
+      expect(tags).toContain('bible/1Mo');
       expect(tags).toHaveLength(2);
     });
   });
@@ -69,8 +69,8 @@ describe('TagGenerator', () => {
 
       // Philemon 1 has 25 verses
       expect(tags).toHaveLength(25);
-      expect(tags[0]).toBe('bible/Phm/1/1');
-      expect(tags[24]).toBe('bible/Phm/1/25');
+      expect(tags[0]).toBe('bible/Phlm/1/1');
+      expect(tags[24]).toBe('bible/Phlm/1/25');
     });
 
     it('should expand chapter range', () => {
@@ -200,7 +200,7 @@ describe('TagGenerator', () => {
       const tags = generator.generateTags(refs);
 
       expect(tags).toHaveLength(2);
-      expect(tags).toContain('bible/Gen/1/1');
+      expect(tags).toContain('bible/1Mo/1/1');
       expect(tags).toContain('bible/Joh/3/16');
     });
 
@@ -310,7 +310,7 @@ describe('TagGenerator', () => {
 
       // Should be sorted alphabetically
       expect(tags).toEqual([
-        'bible/Gen/1/1',
+        'bible/1Mo/1/1',
         'bible/Joh/3/16',
         'bible/Joh/3/18'
       ]);
@@ -341,10 +341,10 @@ describe('parseTag', () => {
   });
 
   it('should parse book-level tag', () => {
-    const result = parseTag('bible/Col');
+    const result = parseTag('bible/Kol');
 
     expect(result).toEqual({
-      bookId: 'Col',
+      bookId: 'Kol',
       granularity: 'book'
     });
   });
@@ -365,18 +365,18 @@ describe('compareTagsBySpecificity', () => {
   });
 
   it('should sort verse tags before book tags', () => {
-    const tags = ['bible/Col', 'bible/Col/3/16'];
+    const tags = ['bible/Kol', 'bible/Col/3/16'];
     tags.sort(compareTagsBySpecificity);
 
-    expect(tags).toEqual(['bible/Col/3/16', 'bible/Col']);
+    expect(tags).toEqual(['bible/Col/3/16', 'bible/Kol']);
   });
 
   it('should sort alphabetically within same specificity', () => {
-    const tags = ['bible/Joh/3/18', 'bible/Gen/1/1', 'bible/Joh/3/16'];
+    const tags = ['bible/Joh/3/18', 'bible/1Mo/1/1', 'bible/Joh/3/16'];
     tags.sort(compareTagsBySpecificity);
 
     expect(tags).toEqual([
-      'bible/Gen/1/1',
+      'bible/1Mo/1/1',
       'bible/Joh/3/16',
       'bible/Joh/3/18'
     ]);
@@ -387,7 +387,7 @@ describe('groupTagsByBook', () => {
   it('should group tags by book', () => {
     const tags = [
       'bible/Joh/3/16',
-      'bible/Gen/1/1',
+      'bible/1Mo/1/1',
       'bible/Joh/3/17',
       'bible/Col/3/16'
     ];
@@ -396,7 +396,7 @@ describe('groupTagsByBook', () => {
 
     expect(grouped.size).toBe(3);
     expect(grouped.get('Joh')).toEqual(['bible/Joh/3/16', 'bible/Joh/3/17']);
-    expect(grouped.get('Gen')).toEqual(['bible/Gen/1/1']);
+    expect(grouped.get('1Mo')).toEqual(['bible/1Mo/1/1']);
     expect(grouped.get('Col')).toEqual(['bible/Col/3/16']);
   });
 

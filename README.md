@@ -31,7 +31,7 @@
 Write Bible references naturally - the plugin recognizes them automatically:
 
 ```markdown
-Today I studied Joh 1,1 and found connections to Genesis 1,1.
+Today I studied John 1,1 and found connections to Genesis 1,1.
 Colossians also discusses creation themes in Col 1,15-20.
 ```
 

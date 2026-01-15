@@ -96,6 +96,16 @@ export class SmartBibleParser {
    */
   private buildPatterns(): void {
     const bookPattern = this.normalizer.getAllAliasesPattern();
+
+    // Guard: If no aliases are configured, disable all patterns
+    // This prevents invalid regex like /\b()\s*.../ which would match empty strings
+    if (!bookPattern) {
+      this.crossChapterPattern = null;
+      this.versePattern = null;
+      this.chapterPattern = null;
+      return;
+    }
+
     const cvSep = escapeRegex(this.settings.separators.chapterVerse);
     const listSep = this.settings.separators.list;
     const rangeSep = this.settings.separators.range;

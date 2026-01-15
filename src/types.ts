@@ -1,4 +1,5 @@
 import { TFile } from 'obsidian';
+import type { SupportedLanguage } from './i18n/types';
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC CONFIGURATION
@@ -83,21 +84,19 @@ export interface CanonicalIdMigration {
  */
 export interface MigrationQueueState {
   migrations: CanonicalIdMigration[];
-  isRunning: boolean;
 }
 
 /**
  * Main plugin settings
  */
 export interface BibleRefSettings {
-  // UI Language
-  uiLanguage: 'de' | 'en';
+  // Language setting (unified: controls both UI and parsing)
+  language: SupportedLanguage;
 
   // Sync options (checkboxes)
   syncOptions: SyncOptions;
 
-  // Format settings
-  language: 'de' | 'en' | 'custom';
+  // Separators for Bible reference format
   separators: SeparatorConfig;
 
   // Frontmatter settings
@@ -160,6 +159,16 @@ export interface ExpandedReference {
   chapter: number;
   verse: number;
 }
+
+/**
+ * Sort modes for sidebar reference lists
+ */
+export type ReferenceSortMode =
+  | 'document'     // Order of appearance in note (DEFAULT)
+  | 'canonical'    // Genesis → Revelation
+  | 'alpha-asc'    // A-Z by book ID
+  | 'alpha-desc'   // Z-A by book ID
+  | 'count';       // By reference count (descending)
 
 // ═══════════════════════════════════════════════════════════════
 // BIBLE DATA STRUCTURE
